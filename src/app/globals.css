@@ -1,26 +1,111 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FAFAF7; /* Basecamp warm canvas background */
+  --foreground: #000000; /* Pure black text */
+  --surface: #FFFFFF;    /* Pure white containers */
+  --border: #D8D8D3;    /* Distinct borders */
+  
+  --text-primary: #000000;
+  --text-secondary: #4A4A48;
+  
+  --accent: #22c55e; /* Basecamp green accent */
+  --warning: #f59e0b;
+  --success: #10b981;
+  --danger: #ef4444;
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-border-custom: var(--border);
+  
+  --color-brand-accent: var(--accent);
+  --color-brand-warning: var(--warning);
+  --color-brand-success: var(--success);
+  --color-brand-danger: var(--danger);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Custom dark theme override when .dark is present */
+.dark {
+  --background: #000000; /* Pure black background */
+  --foreground: #FFFFFF; /* Pure white text */
+  --surface: #0A0A0A;    /* Dark containers */
+  --border: #2D2D2D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B3B3B3;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  line-height: 1.55;
+  font-size: 15px;
+}
+
+/* High contrast overrides: white bg -> black text, black bg -> white text */
+.bg-white, .bg-surface {
+  background-color: var(--surface) !important;
+}
+
+.text-neutral-900, .text-neutral-800, .text-neutral-700, .text-neutral-600 {
+  color: var(--text-primary) !important;
+}
+
+.dark .text-neutral-900, 
+.dark .text-neutral-800, 
+.dark .text-neutral-700, 
+.dark .text-neutral-600, 
+.dark .text-neutral-500, 
+.dark .text-neutral-400, 
+.dark .text-neutral-300, 
+.dark .text-neutral-200, 
+.dark .text-neutral-100 {
+  color: #FFFFFF !important;
+}
+
+.text-neutral-500, .text-neutral-400 {
+  color: var(--text-secondary) !important;
+}
+
+.dark .text-neutral-400, .dark .text-neutral-500 {
+  color: #B3B3B3 !important;
+}
+
+/* Ensure neutral background utility classes map to surface dark color */
+.dark .bg-neutral-50,
+.dark .bg-neutral-100,
+.dark .bg-neutral-200,
+.dark .bg-neutral-50\/50,
+.dark .bg-neutral-100\/40 {
+  background-color: var(--surface) !important;
+}
+
+/* Smooth micro-transitions for UI elements */
+button, a, input, select, textarea {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar customization for a calmer, less intrusive look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }

@@ -1,0 +1,416 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:/Users/apple/Streamlyned/prisma/dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  email                String            @unique
+  name                 String
+  avatarUrl            String?
+  coverUrl             String?
+  planTier             String            @default("standard") // "standard" | "premium" | "premium+"
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  memberships          WorkspaceMember[]
+  projectMemberships   ProjectMember[]
+  taskAssignees        TaskAssignee[]
+  comments             Comment[]
+  discussions          Discussion[]
+  discussionSubs       DiscussionSubscription[]
+  chatMessages         ChatMessage[]
+  chatReactions        ChatMessageReaction[]
+  dmMemberships        DmGroupMember[]
+  calendarAttendees    CalendarEventAttendee[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  checkInAnswers       CheckInAnswer[]
+}
+
+model Workspace {
+  id          String            @id @default(uuid())
+  name        String
+  slug        String            @unique
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     WorkspaceMember[]
+  projects    Project[]
+  dmGroups    DmGroup[]
+  comments    Comment[]
+  discussions Discussion[]
+  chatMessages ChatMessage[]
+  docs        Doc[]
+  events      CalendarEvent[]
+  notifications Notification[]
+  auditLogs   AuditLog[]
+  embeddings  Embedding[]
+  aiSettings  AiSettings?
+  checkInQuestions CheckInQuestion[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String    // "OWNER" | "ADMIN" | "MEMBER" | "CLIENT"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Project {
+  id           String          @id @default(uuid())
+  workspaceId  String
+  name         String
+  description  String?
+  isArchived   Boolean         @default(false)
+  archivedAt   DateTime?
+  deletedAt    DateTime?       // 30-day grace period
+  tools        String          // JSON array of enabled tools, e.g. ["tasks", "discussions", "chat", "docs", "calendar"]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  startDate    DateTime?
+  endDate      DateTime?
+
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members      ProjectMember[]
+  taskLists    TaskList[]
+  discussions  Discussion[]
+  chatMessages ChatMessage[]
+  docs         Doc[]
+  events       CalendarEvent[]
+  auditLogs    AuditLog[]
+  checkInQuestions CheckInQuestion[]
+}
+
+model ProjectMember {
+  id           String   @id @default(uuid())
+  projectId    String
+  userId       String
+  visibleTools String   // JSON array of visible tools for this client/member
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model TaskList {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  position  Float
+  tasks     Task[]
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id           String           @id @default(uuid())
+  workspaceId  String
+  taskListId   String
+  projectId    String
+  title        String
+  notes        String?
+  dueDateStart DateTime?
+  dueDateEnd   DateTime?
+  recurrence   String?          // null | "DAILY" | "WEEKLY" | "MONTHLY" | JSON string
+  position     Float
+  isCompleted  Boolean          @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  visibleToClients Boolean      @default(true)
+  priority     String           @default("P4")
+
+  taskList     TaskList         @relation(fields: [taskListId], references: [id], onDelete: Cascade)
+  assignees    TaskAssignee[]
+  attachments  TaskAttachment[]
+  comments     Comment[]
+}
+
+model TaskAssignee {
+  id     String @id @default(uuid())
+  taskId String
+  userId String
+
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  createdAt DateTime @default(now())
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id              String      @id @default(uuid())
+  workspaceId     String
+  taskId          String?
+  discussionId    String?
+  docId           String?
+  userId          String
+  content         String
+  isClientComment Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task            Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  discussion      Discussion? @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  doc             Doc?        @relation(fields: [docId], references: [id], onDelete: Cascade)
+}
+
+model Discussion {
+  id          String                 @id @default(uuid())
+  workspaceId String
+  projectId   String
+  title       String
+  content     String
+  userId      String
+  isPinned    Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  visibleToClients Boolean            @default(true)
+
+  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+  subs        DiscussionSubscription[]
+}
+
+model DiscussionSubscription {
+  id           String     @id @default(uuid())
+  discussionId String
+  userId       String
+
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([discussionId, userId])
+}
+
+model ChatMessage {
+  id          String                 @id @default(uuid())
+  workspaceId String
+  projectId   String?                // null for DM
+  dmGroupId   String?                // null for Project Chat
+  userId      String
+  content     String
+  createdAt   DateTime               @default(now())
+
+  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project?               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dmGroup     DmGroup?               @relation(fields: [dmGroupId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions   ChatMessageReaction[]
+  files       ChatMessageFile[]
+}
+
+model ChatMessageReaction {
+  id        String      @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+}
+
+model ChatMessageFile {
+  id        String      @id @default(uuid())
+  messageId String
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  createdAt DateTime    @default(now())
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model DmGroup {
+  id          String          @id @default(uuid())
+  workspaceId String
+  name        String?         // Optional (e.g. for group DMs)
+  createdAt   DateTime        @default(now())
+
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members     DmGroupMember[]
+  messages    ChatMessage[]
+}
+
+model DmGroupMember {
+  id        String   @id @default(uuid())
+  dmGroupId String
+  userId    String
+
+  dmGroup   DmGroup  @relation(fields: [dmGroupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([dmGroupId, userId])
+}
+
+model Doc {
+  id          String       @id @default(uuid())
+  workspaceId String
+  projectId   String
+  title       String
+  content     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  visibleToClients Boolean  @default(true)
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions    DocVersion[]
+  comments    Comment[]
+}
+
+model DocVersion {
+  id          String   @id @default(uuid())
+  docId       String
+  title       String
+  content     String
+  version     Int
+  createdAt   DateTime @default(now())
+  createdById String
+
+  doc         Doc      @relation(fields: [docId], references: [id], onDelete: Cascade)
+}
+
+model CalendarEvent {
+  id            String                  @id @default(uuid())
+  workspaceId   String
+  projectId     String
+  title         String
+  description   String?
+  startAt       DateTime
+  endAt         DateTime
+  recurrence    String?                 // null | "DAILY" | "WEEKLY" | "MONTHLY"
+  videoCallLink String?
+  location      String?
+  createdAt     DateTime                @default(now())
+  priority      String                  @default("P4")
+
+  workspace     Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project       Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  attendees     CalendarEventAttendee[]
+}
+
+model CalendarEventAttendee {
+  id      String        @id @default(uuid())
+  eventId String
+  userId  String
+
+  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model Notification {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  userId       String
+  type         String    // e.g. "MENTION" | "ASSIGNMENT" | "DUE_DATE" | "COMMENT" | "MESSAGE" | "DM"
+  title        String
+  message      String
+  targetUrl    String
+  isRead       Boolean   @default(false)
+  isSuppressed Boolean   @default(false) // For Smart Reminders
+  createdAt    DateTime  @default(now())
+  priority     String    @default("P4")
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  workspaceId String
+  projectId   String?
+  entityType  String    // e.g. "TASK" | "DISCUSSION" | "CHAT" | "DOC" | "COMMENT"
+  entityId    String
+  userId      String
+  action      String    // e.g. "CREATE" | "UPDATE" | "DELETE" | "COMPLETE"
+  description String
+  createdAt   DateTime  @default(now())
+  priority    String    @default("P4")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Embedding {
+  id          String    @id @default(uuid())
+  workspaceId String
+  entityType  String    // "TASK" | "DISCUSSION" | "CHAT" | "DOC" | "COMMENT"
+  entityId    String
+  projectId   String?
+  text        String
+  vector      String    // Store float array as JSON string
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model AiSettings {
+  id               String    @id @default(uuid())
+  workspaceId      String    @unique
+  provider         String    @default("gemini") // "gemini" | "openai" | "anthropic"
+  apiKey           String?
+  embeddingsModel  String    @default("text-embedding-004")
+  completionModel  String    @default("gemini-1.5-flash")
+  config           String    @default("{}") // JSON string for other configs
+
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model CheckInQuestion {
+  id          String   @id @default(uuid())
+  workspaceId String
+  projectId   String
+  question    String
+  scheduleDay String   // e.g. "Monday", "Wednesday"
+  scheduleTime String   // e.g. "09:00"
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  answers     CheckInAnswer[]
+}
+
+model CheckInAnswer {
+  id         String   @id @default(uuid())
+  questionId String
+  userId     String
+  content    String
+  createdAt  DateTime @default(now())
+
+  question   CheckInQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
