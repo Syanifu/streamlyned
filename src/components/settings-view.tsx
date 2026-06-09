@@ -33,10 +33,10 @@ export default function SettingsView({
   const router = useRouter();
 
   // AI Form States
-  const [provider, setProvider] = useState(initialSettings?.provider || "gemini");
+  const [provider, setProvider] = useState(initialSettings?.provider || "openai");
   const [apiKey, setApiKey] = useState(initialSettings?.apiKey || "");
-  const [completionModel, setCompletionModel] = useState(initialSettings?.completionModel || "gemini-1.5-flash");
-  const [embeddingsModel, setEmbeddingsModel] = useState(initialSettings?.embeddingsModel || "text-embedding-004");
+  const [completionModel, setCompletionModel] = useState(initialSettings?.completionModel || "gpt-4o-mini");
+  const [embeddingsModel, setEmbeddingsModel] = useState(initialSettings?.embeddingsModel || "text-embedding-3-small");
   
   const [isSavingAi, setIsSavingAi] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
@@ -152,8 +152,8 @@ export default function SettingsView({
                     onChange={(e) => setProvider(e.target.value)}
                     className="w-full text-xs px-3.5 py-2 border border-border-custom bg-surface rounded-lg focus:outline-none focus:border-brand-accent"
                   >
-                    <option value="gemini">Google Gemini</option>
                     <option value="openai">OpenAI GPT</option>
+                    <option value="gemini">Google Gemini</option>
                     <option value="anthropic">Anthropic Claude</option>
                   </select>
                 </div>

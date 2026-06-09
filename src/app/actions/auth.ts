@@ -185,7 +185,7 @@ export async function createWorkspaceAction(formData: {
     await db.aiSettings.create({
       data: {
         workspaceId: workspace.id,
-        provider: "gemini",
+        provider: "openai",
       },
     });
 

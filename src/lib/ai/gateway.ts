@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { OpenAI } from "openai";
 
 export interface GatewayResponse {
   text: string;
@@ -8,7 +9,7 @@ export interface GatewayResponse {
 
 /**
  * AI Gateway implementing the requested 6 internal API methods
- * Supporting Gemini, OpenAI, and Anthropic with local fallback mocks.
+ * Supporting OpenAI and Gemini with official OpenAI SDK.
  */
 class AiGateway {
   private async getProviderConfig(workspaceId: string) {
@@ -16,20 +17,20 @@ class AiGateway {
       where: { workspaceId },
     });
 
-    const provider = settings?.provider || "gemini";
+    const provider = settings?.provider || "openai";
     // Check DB first, fallback to standard environment variables
     let apiKey = settings?.apiKey || "";
     if (!apiKey) {
-      if (provider === "gemini") apiKey = process.env.GEMINI_API_KEY || "";
-      else if (provider === "openai") apiKey = process.env.OPENAI_API_KEY || "";
+      if (provider === "openai") apiKey = process.env.OPENAI_API_KEY || "";
+      else if (provider === "gemini") apiKey = process.env.GEMINI_API_KEY || "";
       else if (provider === "anthropic") apiKey = process.env.ANTHROPIC_API_KEY || "";
     }
 
     return {
       provider,
       apiKey,
-      completionModel: settings?.completionModel || "gemini-1.5-flash",
-      embeddingsModel: settings?.embeddingsModel || "text-embedding-004",
+      completionModel: settings?.completionModel || "gpt-4o-mini",
+      embeddingsModel: settings?.embeddingsModel || "text-embedding-3-small",
     };
   }
 
@@ -49,6 +50,22 @@ class AiGateway {
     }
 
     try {
+      if (provider === "openai") {
+        const client = new OpenAI({ apiKey });
+        const response = await client.responses.create({
+          model: completionModel,
+          input: [
+            {
+              role: "user",
+              content: [{ type: "input_text", text: prompt }]
+            }
+          ],
+          text: schema ? { format: { type: "json_object" } } : undefined,
+        });
+        const text = response.output_text || "";
+        return { text };
+      }
+
       if (provider === "gemini") {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${completionModel}:generateContent?key=${apiKey}`,
@@ -67,24 +84,6 @@ class AiGateway {
         );
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        return { text };
-      }
-
-      if (provider === "openai") {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: completionModel,
-            messages: [{ role: "user", content: prompt }],
-            response_format: schema ? { type: "json_object" } : undefined,
-          }),
-        });
-        const data = await response.json();
-        const text = data.choices?.[0]?.message?.content || "";
         return { text };
       }
 
@@ -123,6 +122,15 @@ class AiGateway {
     }
 
     try {
+      if (provider === "openai") {
+        const client = new OpenAI({ apiKey });
+        const response = await client.embeddings.create({
+          model: embeddingsModel,
+          input: text,
+        });
+        return response.data[0].embedding || this.mockEmbed(text);
+      }
+
       if (provider === "gemini") {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${embeddingsModel}:embedContent?key=${apiKey}`,
@@ -136,22 +144,6 @@ class AiGateway {
         );
         const data = await response.json();
         return data.embedding?.values || this.mockEmbed(text);
-      }
-
-      if (provider === "openai") {
-        const response = await fetch("https://api.openai.com/v1/embeddings", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: embeddingsModel || "text-embedding-3-small",
-            input: text,
-          }),
-        });
-        const data = await response.json();
-        return data.data?.[0]?.embedding || this.mockEmbed(text);
       }
 
       return this.mockEmbed(text);

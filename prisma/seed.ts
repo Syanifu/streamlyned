@@ -325,9 +325,9 @@ async function main() {
   await prisma.aiSettings.create({
     data: {
       workspaceId: workspace.id,
-      provider: "gemini",
-      embeddingsModel: "text-embedding-004",
-      completionModel: "gemini-1.5-flash",
+      provider: "openai",
+      embeddingsModel: "text-embedding-3-small",
+      completionModel: "gpt-4o-mini",
     },
   });
 

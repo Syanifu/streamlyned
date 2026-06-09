@@ -379,10 +379,10 @@ model Embedding {
 model AiSettings {
   id               String    @id @default(uuid())
   workspaceId      String    @unique
-  provider         String    @default("gemini") // "gemini" | "openai" | "anthropic"
+  provider         String    @default("openai") // "gemini" | "openai" | "anthropic"
   apiKey           String?
-  embeddingsModel  String    @default("text-embedding-004")
-  completionModel  String    @default("gemini-1.5-flash")
+  embeddingsModel  String    @default("text-embedding-3-small")
+  completionModel  String    @default("gpt-4o-mini")
   config           String    @default("{}") // JSON string for other configs
 
   workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
