@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { setSession, clearSession } from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/hash";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -96,10 +97,11 @@ export async function createWorkspaceAction(formData: {
   workspaceSlug: string;
   email: string;
   name: string;
+  password?: string;
 }) {
-  const { workspaceName, workspaceSlug, email, name } = formData;
+  const { workspaceName, workspaceSlug, email, name, password } = formData;
 
-  if (!workspaceName || !workspaceSlug || !email || !name) {
+  if (!workspaceName || !workspaceSlug || !email || !name || !password) {
     return { success: false, error: "All fields are required." };
   }
 
@@ -119,9 +121,18 @@ export async function createWorkspaceAction(formData: {
         data: {
           email: email.trim(),
           name: name.trim(),
+          passwordHash: hashPassword(password),
           avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${name.replace(/\s+/g, "")}`,
         },
       });
+    } else {
+      // If user exists but has no password hash set, update it
+      if (!user.passwordHash) {
+        await db.user.update({
+          where: { id: user.id },
+          data: { passwordHash: hashPassword(password) },
+        });
+      }
     }
 
     // Create workspace
@@ -212,3 +223,68 @@ export async function createWorkspaceAction(formData: {
   // Redirect to dashboard page
   redirect("/dashboard");
 }
+
+/**
+ * Log into an existing workspace with email and password
+ */
+export async function loginAction(formData: {
+  email: string;
+  password?: string;
+  workspaceSlug: string;
+}) {
+  const { email, password, workspaceSlug } = formData;
+
+  if (!email || !password || !workspaceSlug) {
+    return { success: false, error: "All fields are required." };
+  }
+
+  const cleanSlug = workspaceSlug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-");
+
+  try {
+    const workspace = await db.workspace.findUnique({
+      where: { slug: cleanSlug },
+      include: {
+        members: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!workspace) {
+      return { success: false, error: `Workspace slug "${cleanSlug}" not found.` };
+    }
+
+    const member = workspace.members.find((m) => m.user.email === email.trim());
+    if (!member) {
+      return { success: false, error: `User with email "${email}" is not a member of this workspace.` };
+    }
+
+    const user = member.user;
+    if (user.passwordHash) {
+      const isMatch = verifyPassword(password, user.passwordHash);
+      if (!isMatch) {
+        return { success: false, error: "Incorrect password." };
+      }
+    } else {
+      // If user has no passwordHash (seeded user), set their password now so they have one
+      await db.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hashPassword(password) },
+      });
+    }
+
+    // Set active session
+    await setSession(user.email, workspace.slug);
+
+  } catch (error: any) {
+    console.error("Login failed:", error);
+    return { success: false, error: error.message || "An unexpected error occurred." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
