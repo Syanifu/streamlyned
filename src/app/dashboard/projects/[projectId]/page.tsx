@@ -29,21 +29,38 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   const { projectId } = await params;
   const { tab = "tasks", task: selectedTaskId, id: selectedId } = await searchParams;
 
-  // 1. Fetch project with workspace validation (multi-tenant isolation)
-  const project = await db.project.findFirst({
-    where: {
-      id: projectId,
-      workspaceId: session.workspace.id,
-      deletedAt: null,
-    },
-    include: {
-      members: {
-        include: {
-          user: true,
+  // 1. Fetch project with validation and all workspace users in parallel (multi-tenant isolation)
+  const [project, allWorkspaceUsers] = await Promise.all([
+    db.project.findFirst({
+      where: {
+        id: projectId,
+        workspaceId: session.workspace.id,
+        deletedAt: null,
+      },
+      include: {
+        members: {
+          include: {
+            user: true,
+          },
         },
       },
-    },
-  });
+    }),
+    db.user.findMany({
+      where: {
+        memberships: {
+          some: {
+            workspaceId: session.workspace.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+      },
+    })
+  ]);
 
   if (!project) {
     redirect("/dashboard");
@@ -75,106 +92,93 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     );
   }
 
-  // Fetch all workspace users to pass down for assignees and @mentions
-  const allWorkspaceUsers = await db.user.findMany({
-    where: {
-      memberships: {
-        some: {
-          workspaceId: session.workspace.id,
-        },
-      },
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      avatarUrl: true,
-    },
-  });
-
   // Query specific data for the Tasks Tab
   let lists: any[] = [];
   let selectedTaskDetails: any = null;
   let taskHistory: any[] = [];
 
   if (tab === "tasks") {
-    // Query lists and tasks
-    lists = await db.taskList.findMany({
-      where: { projectId },
-      orderBy: { position: "asc" },
-      include: {
-        tasks: {
-          where: session.role === "CLIENT" ? { visibleToClients: true } : {},
-          orderBy: { position: "asc" },
-          include: {
-            assignees: {
-              include: {
-                user: true,
-              },
-            },
-            comments: true,
-          },
-        },
-      },
-    });
-
-    if (selectedTaskId) {
-      selectedTaskDetails = await db.task.findFirst({
-        where: { 
-          id: selectedTaskId, 
-          projectId,
-          ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
-        },
+    // Query lists and details in parallel
+    const [listsResult, taskDetailsResult] = await Promise.all([
+      db.taskList.findMany({
+        where: { projectId },
+        orderBy: { position: "asc" },
         include: {
-          assignees: {
+          tasks: {
+            where: session.role === "CLIENT" ? { visibleToClients: true } : {},
+            orderBy: { position: "asc" },
             include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  avatarUrl: true,
+              assignees: {
+                include: {
+                  user: true,
+                },
+              },
+              comments: true,
+            },
+          },
+        },
+      }),
+      selectedTaskId
+        ? db.task.findFirst({
+            where: { 
+              id: selectedTaskId, 
+              projectId,
+              ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
+            },
+            include: {
+              assignees: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      avatarUrl: true,
+                    },
+                  },
+                },
+              },
+              comments: {
+                orderBy: { createdAt: "desc" },
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      avatarUrl: true,
+                    },
+                  },
                 },
               },
             },
-          },
-          comments: {
-            orderBy: { createdAt: "desc" },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  avatarUrl: true,
-                },
-              },
+          })
+        : Promise.resolve(null)
+    ]);
+
+    lists = listsResult;
+    selectedTaskDetails = taskDetailsResult;
+
+    if (selectedTaskDetails) {
+      taskHistory = await db.auditLog.findMany({
+        where: {
+          workspaceId: session.workspace.id,
+          projectId,
+          entityType: "TASK",
+          entityId: selectedTaskId,
+        },
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
             },
           },
         },
       });
-
-      if (selectedTaskDetails) {
-        taskHistory = await db.auditLog.findMany({
-          where: {
-            workspaceId: session.workspace.id,
-            projectId,
-            entityType: "TASK",
-            entityId: selectedTaskId,
-          },
-          orderBy: { createdAt: "desc" },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        });
-      }
     }
   }
 

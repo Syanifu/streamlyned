@@ -23,30 +23,30 @@ export default async function DashboardLayout({
 
   const isClient = session.role === "CLIENT";
 
-  // Fetch active projects that the user belongs to
-  const projects = await db.project.findMany({
-    where: {
-      workspaceId: session.workspace.id,
-      isArchived: false,
-      deletedAt: null,
-      members: {
-        some: {
-          userId: session.user.id,
+  // Fetch projects and unread notifications count in parallel
+  const [projects, unreadNotificationsCount] = await Promise.all([
+    db.project.findMany({
+      where: {
+        workspaceId: session.workspace.id,
+        isArchived: false,
+        deletedAt: null,
+        members: {
+          some: {
+            userId: session.user.id,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "asc" },
-  });
-
-  // Fetch unread notification count
-  const unreadNotificationsCount = await db.notification.count({
-    where: {
-      workspaceId: session.workspace.id,
-      userId: session.user.id,
-      isRead: false,
-      isSuppressed: false,
-    },
-  });
+      orderBy: { createdAt: "asc" },
+    }),
+    db.notification.count({
+      where: {
+        workspaceId: session.workspace.id,
+        userId: session.user.id,
+        isRead: false,
+        isSuppressed: false,
+      },
+    })
+  ]);
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden font-sans">

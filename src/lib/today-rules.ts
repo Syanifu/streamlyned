@@ -21,29 +21,50 @@ export async function getTodayViewData(
 ): Promise<TodayItem[]> {
   const items: TodayItem[] = [];
 
-  // 1. Fetch all uncompleted tasks in this workspace where user is an assignee
-  const assignedTasks = await db.task.findMany({
-    where: {
-      workspaceId,
-      isCompleted: false,
-      assignees: {
-        some: {
-          userId,
+  // 1 & 2. Fetch uncompleted tasks and subscribed discussions in parallel
+  const [assignedTasks, subscribedDiscussions] = await Promise.all([
+    db.task.findMany({
+      where: {
+        workspaceId,
+        isCompleted: false,
+        assignees: {
+          some: {
+            userId,
+          },
         },
       },
-    },
-    include: {
-      taskList: {
-        include: {
-          project: true,
+      include: {
+        taskList: {
+          include: {
+            project: true,
+          },
+        },
+        comments: {
+          orderBy: { createdAt: "desc" },
+          take: 2,
         },
       },
-      comments: {
-        orderBy: { createdAt: "desc" },
-        take: 2,
+    }),
+    db.discussionSubscription.findMany({
+      where: {
+        userId,
+        discussion: {
+          workspaceId,
+        },
       },
-    },
-  });
+      include: {
+        discussion: {
+          include: {
+            project: true,
+            comments: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    })
+  ]);
 
   const now = new Date();
   const today = startOfDay(now);
@@ -103,27 +124,6 @@ export async function getTodayViewData(
       priority: task.priority,
     });
   }
-
-  // 2. Fetch discussions user is subscribed to (recent updates)
-  const subscribedDiscussions = await db.discussionSubscription.findMany({
-    where: {
-      userId,
-      discussion: {
-        workspaceId,
-      },
-    },
-    include: {
-      discussion: {
-        include: {
-          project: true,
-          comments: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-          },
-        },
-      },
-    },
-  });
 
   for (const sub of subscribedDiscussions) {
     const d = sub.discussion;

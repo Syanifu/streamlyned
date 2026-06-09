@@ -16,40 +16,40 @@ export default async function ReportsPage() {
     redirect("/dashboard");
   }
 
-  // 1. Fetch all projects in the workspace (excluding deleted ones)
-  const projects = await db.project.findMany({
-    where: {
-      workspaceId: session.workspace.id,
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      startDate: true,
-      endDate: true,
-      isArchived: true,
-    },
-  });
-
-  const projectIds = projects.map((p) => p.id);
-
-  // 2. Fetch all workspace members/users
-  const workspaceUsers = await db.user.findMany({
-    where: {
-      memberships: {
-        some: {
-          workspaceId: session.workspace.id,
+  // 1 & 2. Fetch all projects and workspace users in parallel
+  const [projects, workspaceUsers] = await Promise.all([
+    db.project.findMany({
+      where: {
+        workspaceId: session.workspace.id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        isArchived: true,
+      },
+    }),
+    db.user.findMany({
+      where: {
+        memberships: {
+          some: {
+            workspaceId: session.workspace.id,
+          },
         },
       },
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      avatarUrl: true,
-    },
-  });
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+      },
+    })
+  ]);
+ 
+  const projectIds = projects.map((p) => p.id);
 
   // 3. Fetch all tasks in the workspace
   const tasks = await db.task.findMany({

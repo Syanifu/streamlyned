@@ -16,26 +16,26 @@ export default async function SettingsPage() {
     redirect("/dashboard");
   }
 
-  // 1. Fetch AI Gateway configurations
-  const aiSettings = await db.aiSettings.findUnique({
-    where: { workspaceId: session.workspace.id },
-  });
-
-  // 2. Fetch all members belonging to this workspace
-  const members = await db.workspaceMember.findMany({
-    where: { workspaceId: session.workspace.id },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatarUrl: true,
+  // 1 & 2. Fetch AI Gateway configurations and members in parallel
+  const [aiSettings, members] = await Promise.all([
+    db.aiSettings.findUnique({
+      where: { workspaceId: session.workspace.id },
+    }),
+    db.workspaceMember.findMany({
+      where: { workspaceId: session.workspace.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
         },
       },
-    },
-    orderBy: { role: "asc" },
-  });
+      orderBy: { role: "asc" },
+    })
+  ]);
 
   return (
     <SettingsView

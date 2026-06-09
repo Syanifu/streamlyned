@@ -30,106 +30,31 @@ export default async function EverythingPage() {
 
   const projectIds = projects.map((p) => p.id);
 
-  // 2. Fetch all comments in these projects (with client visibility filters if client role)
-  const comments = await db.comment.findMany({
-    where: {
-      workspaceId: session.workspace.id,
-      OR: [
-        {
-          task: {
-            projectId: { in: projectIds },
-            ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
-          },
-        },
-        {
-          discussion: {
-            projectId: { in: projectIds },
-            ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
-          },
-        },
-        {
-          doc: {
-            projectId: { in: projectIds },
-            ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
-          },
-        },
-      ],
-    },
-    include: {
-      user: {
-        select: {
-          name: true,
-          avatarUrl: true,
-        },
-      },
-      task: {
-        select: {
-          id: true,
-          title: true,
-          projectId: true,
-        },
-      },
-      discussion: {
-        select: {
-          id: true,
-          title: true,
-          projectId: true,
-        },
-      },
-      doc: {
-        select: {
-          id: true,
-          title: true,
-          projectId: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  // 3. Fetch all documents in these projects
-  const docs = await db.doc.findMany({
-    where: {
-      projectId: { in: projectIds },
-      ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
-    },
-    select: {
-      id: true,
-      title: true,
-      updatedAt: true,
-      projectId: true,
-    },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  // 4. Fetch all task attachments in these projects
-  const taskAttachments = await db.taskAttachment.findMany({
-    where: {
-      task: {
-        projectId: { in: projectIds },
-        ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
-      },
-    },
-    include: {
-      task: {
-        select: {
-          id: true,
-          title: true,
-          projectId: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  // 5. Fetch Check-in answers if user is not a client
-  let checkInAnswers: any[] = [];
-  if (session.role !== "CLIENT") {
-    checkInAnswers = await db.checkInAnswer.findMany({
+  // 2, 3, 4 & 5. Fetch comments, docs, task attachments, and check-in answers in parallel
+  const [comments, docs, taskAttachments, checkInAnswers] = await Promise.all([
+    db.comment.findMany({
       where: {
-        question: {
-          projectId: { in: projectIds },
-        },
+        workspaceId: session.workspace.id,
+        OR: [
+          {
+            task: {
+              projectId: { in: projectIds },
+              ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
+            },
+          },
+          {
+            discussion: {
+              projectId: { in: projectIds },
+              ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
+            },
+          },
+          {
+            doc: {
+              projectId: { in: projectIds },
+              ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
+            },
+          },
+        ],
       },
       include: {
         user: {
@@ -138,16 +63,86 @@ export default async function EverythingPage() {
             avatarUrl: true,
           },
         },
-        question: {
+        task: {
           select: {
-            question: true,
+            id: true,
+            title: true,
+            projectId: true,
+          },
+        },
+        discussion: {
+          select: {
+            id: true,
+            title: true,
+            projectId: true,
+          },
+        },
+        doc: {
+          select: {
+            id: true,
+            title: true,
             projectId: true,
           },
         },
       },
       orderBy: { createdAt: "desc" },
-    });
-  }
+    }),
+    db.doc.findMany({
+      where: {
+        projectId: { in: projectIds },
+        ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
+      },
+      select: {
+        id: true,
+        title: true,
+        updatedAt: true,
+        projectId: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.taskAttachment.findMany({
+      where: {
+        task: {
+          projectId: { in: projectIds },
+          ...(session.role === "CLIENT" ? { visibleToClients: true } : {}),
+        },
+      },
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true,
+            projectId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    session.role !== "CLIENT"
+      ? db.checkInAnswer.findMany({
+          where: {
+            question: {
+              projectId: { in: projectIds },
+            },
+          },
+          include: {
+            user: {
+              select: {
+                name: true,
+                avatarUrl: true,
+              },
+            },
+            question: {
+              select: {
+                question: true,
+                projectId: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([])
+  ]);
 
   // Format dates for props safety
   const formattedComments = comments.map((c) => ({
