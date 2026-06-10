@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Sparkles, X, Send, HelpCircle, Loader2, FileText, CheckSquare, MessageSquare, Compass, AlertTriangle, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,9 +21,14 @@ interface Message {
 }
 
 export default function ContextChatDrawer() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  if (pathname === "/dashboard/ask-ai") {
+    return null;
+  }
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",

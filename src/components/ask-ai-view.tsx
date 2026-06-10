@@ -62,9 +62,9 @@ export default function AskAiView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 max-w-4xl mx-auto min-h-0 pb-12">
+    <div className="flex-1 flex flex-col space-y-6 max-w-4xl mx-auto min-h-0 pb-20 sm:pb-24">
       {/* Messages Feed */}
-      <div className="flex-1 bg-surface border border-border-custom rounded-xl p-5 overflow-y-auto space-y-4 min-h-[350px]">
+      <div className="flex-1 bg-surface border border-border-custom rounded-xl p-4 sm:p-5 pb-20 sm:pb-24 overflow-y-auto space-y-4 min-h-[300px] sm:min-h-[350px]">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-6">
             <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/35 rounded-full">
@@ -143,26 +143,31 @@ export default function AskAiView() {
         )}
       </div>
 
-      {/* Input Box */}
-      <form onSubmit={(e) => handleSubmit(e)} className="flex gap-2.5 bg-surface border border-border-custom p-4 rounded-xl items-center shadow-xs">
-        <CornerDownRight size={14} className="text-neutral-400 shrink-0 hidden sm:block" />
-        <input
-          type="text"
-          required
-          placeholder="Ask a question about operations, timelines, or risk areas..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={isLoading}
-          className="flex-1 text-xs px-3.5 py-2 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-indigo-500 placeholder-neutral-400 text-neutral-800 dark:text-neutral-100 disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="p-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-lg disabled:opacity-50 shrink-0 transition-colors"
+      {/* Input Box Wrapper */}
+      <div className="fixed sm:absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-6 pb-4 sm:pt-8 sm:pb-6 px-4 sm:px-8 flex justify-center pointer-events-none z-10">
+        <form 
+          onSubmit={(e) => handleSubmit(e)} 
+          className="max-w-2xl w-full bg-surface border border-border-custom p-2.5 sm:p-4 rounded-xl flex gap-2 sm:gap-2.5 items-center shadow-lg pointer-events-auto"
         >
-          <Send size={13} />
-        </button>
-      </form>
+          <CornerDownRight size={14} className="text-neutral-400 shrink-0 hidden sm:block" />
+          <input
+            type="text"
+            required
+            placeholder="Ask a question about operations, timelines, or risk areas..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={isLoading}
+            className="flex-1 text-xs px-3 py-1.5 sm:px-3.5 sm:py-2 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-indigo-500 placeholder-neutral-400 text-neutral-800 dark:text-neutral-100 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="p-2.5 bg-neutral-950 hover:bg-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-lg disabled:opacity-50 shrink-0 transition-colors"
+          >
+            <Send size={13} />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
