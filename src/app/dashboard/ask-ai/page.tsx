@@ -1,7 +1,7 @@
 import React from "react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import AskAiView from "@/components/ask-ai-view";
+import SuperAdminAiConsole from "@/components/super-admin-ai-console";
 
 export default async function AskAiPage() {
   const session = await getSession();
@@ -25,7 +25,7 @@ export default async function AskAiPage() {
         </p>
       </div>
 
-      <AskAiView />
+      <SuperAdminAiConsole />
     </div>
   );
 }

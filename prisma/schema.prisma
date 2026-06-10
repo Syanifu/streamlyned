@@ -30,12 +30,14 @@ model User {
   notifications        Notification[]
   auditLogs            AuditLog[]
   checkInAnswers       CheckInAnswer[]
+  aiConfigs            AiConfig[]
 }
 
 model Workspace {
   id          String            @id @default(uuid())
   name        String
   slug        String            @unique
+  apiKey      String?           @unique
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   members     WorkspaceMember[]
@@ -50,6 +52,7 @@ model Workspace {
   auditLogs   AuditLog[]
   embeddings  Embedding[]
   aiSettings  AiSettings?
+  aiConfig    AiConfig?
   checkInQuestions CheckInQuestion[]
 }
 
@@ -90,6 +93,7 @@ model Project {
   events       CalendarEvent[]
   auditLogs    AuditLog[]
   checkInQuestions CheckInQuestion[]
+  hillChartItems HillChartItem[]
 }
 
 model ProjectMember {
@@ -414,4 +418,29 @@ model CheckInAnswer {
 
   question   CheckInQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model HillChartItem {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  progress  Float    @default(50.0) // 0 to 100
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model AiConfig {
+  id           String    @id @default(uuid())
+  orgId        String    @unique @map("org_id")
+  systemPrompt String    @map("system_prompt") @db.Text
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy    String    @map("updated_by")
+
+  workspace    Workspace @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [updatedBy], references: [id], onDelete: Cascade)
+
+  @@map("ai_config")
 }
