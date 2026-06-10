@@ -8,10 +8,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get("code");
-    const workspaceSlug = searchParams.get("slug") || "";
 
     if (!code) {
-      console.error("Auth Callback: Missing OAuth authorization code");
+      console.error("Auth Callback: Missing authorization code");
       return NextResponse.redirect(`${origin}/?error=MissingCode`);
     }
 
@@ -33,7 +32,7 @@ export async function GET(request: Request) {
       }
     );
 
-    // Exchange authentication code for active Supabase session
+    // Exchange auth code for active Supabase session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
@@ -43,17 +42,17 @@ export async function GET(request: Request) {
 
     const email = data?.user?.email;
     if (!email) {
-      console.error("Auth Callback: No email found in Google OAuth response");
+      console.error("Auth Callback: No email found in user metadata");
       return NextResponse.redirect(`${origin}/?error=NoEmail`);
     }
 
-    // 1. Sync User into the local Prisma database
+    // 1. Find or create User in Prisma
     let user = await db.user.findUnique({ where: { email } });
+    const metadata = data.user.user_metadata || {};
+    const fullName = metadata.full_name || metadata.name || email.split("@")[0];
+    const formattedName = fullName.charAt(0).toUpperCase() + fullName.slice(1);
+
     if (!user) {
-      const metadata = data.user.user_metadata || {};
-      const fullName = metadata.full_name || metadata.name || email.split("@")[0];
-      const formattedName = fullName.charAt(0).toUpperCase() + fullName.slice(1);
-      
       user = await db.user.create({
         data: {
           email,
@@ -63,57 +62,114 @@ export async function GET(request: Request) {
       });
     }
 
-    // 2. Resolve Workspace from slug
-    // If slug is missing, find user's first workspace membership or default to "first-workspace"
-    let targetSlug = workspaceSlug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-");
-    
-    if (!targetSlug) {
-      const firstMembership = await db.workspaceMember.findFirst({
-        where: { userId: user.id },
-        include: { workspace: true },
-      });
-      if (firstMembership) {
-        targetSlug = firstMembership.workspace.slug;
-      } else {
-        // Fallback or request signup slug
-        targetSlug = "general-workspace";
-      }
-    }
+    // 2. Resolve Workspace membership
+    let targetWorkspaceSlug = "";
+    const firstMembership = await db.workspaceMember.findFirst({
+      where: { userId: user.id },
+      include: { workspace: true },
+    });
 
-    // 3. Pre-create the workspace if it does not exist (to ensure frictionless login)
-    let workspace = await db.workspace.findUnique({ where: { slug: targetSlug } });
-    if (!workspace) {
-      workspace = await db.workspace.create({
+    if (firstMembership) {
+      // Existing user -> log into their first active workspace
+      targetWorkspaceSlug = firstMembership.workspace.slug;
+    } else {
+      // New user signup -> automatically create and seed a default workspace!
+      const baseSlug = email.split("@")[0].toLowerCase().replace(/[^a-z0-9-]/g, "-");
+      
+      // Ensure slug uniqueness
+      let uniqueSlug = baseSlug;
+      let counter = 1;
+      while (await db.workspace.findUnique({ where: { slug: uniqueSlug } })) {
+        uniqueSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      const workspaceName = `${formattedName}'s Workspace`;
+      
+      // Create Workspace
+      const workspace = await db.workspace.create({
         data: {
-          name: targetSlug.split("-").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" "),
-          slug: targetSlug,
+          name: workspaceName,
+          slug: uniqueSlug,
         },
       });
-    }
 
-    // 4. Create Workspace membership (default to OWNER if first member, else MEMBER)
-    const membershipCount = await db.workspaceMember.count({
-      where: { workspaceId: workspace.id },
-    });
-    const targetRole = membershipCount === 0 ? "OWNER" : "MEMBER";
+      targetWorkspaceSlug = uniqueSlug;
 
-    const membership = await db.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId: workspace.id, userId: user.id } },
-    });
-    if (!membership) {
+      // Create OWNER membership for the user
       await db.workspaceMember.create({
         data: {
           workspaceId: workspace.id,
           userId: user.id,
-          role: targetRole,
+          role: "OWNER",
+        },
+      });
+
+      // Seed default Project
+      const project = await db.project.create({
+        data: {
+          workspaceId: workspace.id,
+          name: "First Project",
+          description: "Welcome to your new workspace! Here is your first project.",
+          tools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+        },
+      });
+
+      // Add user to project
+      await db.projectMember.create({
+        data: {
+          projectId: project.id,
+          userId: user.id,
+          visibleTools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+        },
+      });
+
+      // Add default Task List
+      const list = await db.taskList.create({
+        data: {
+          projectId: project.id,
+          name: "General Tasks",
+          position: 1000,
+        },
+      });
+
+      // Add default Task
+      await db.task.create({
+        data: {
+          workspaceId: workspace.id,
+          taskListId: list.id,
+          projectId: project.id,
+          title: "Explore Streamlyned features",
+          notes: "Welcome! Toggle between roles using the developer banner below, and test discussions, chat, documents, and search.",
+          position: 1000,
+        },
+      });
+
+      // Create default AI Settings
+      await db.aiSettings.create({
+        data: {
+          workspaceId: workspace.id,
+          provider: "openai",
+        },
+      });
+
+      // Log the action
+      await db.auditLog.create({
+        data: {
+          workspaceId: workspace.id,
+          entityType: "WORKSPACE",
+          entityId: workspace.id,
+          userId: user.id,
+          action: "CREATE",
+          description: `Created workspace ${workspaceName} via passwordless signup`,
         },
       });
     }
 
-    // 5. Establish Streamlyned active cookies session
-    await setSession(email, targetSlug);
+    // 3. Establish Streamlyned active cookies session
+    await setSession(email, targetWorkspaceSlug);
 
-    // 6. Redirect safely to dashboard
+    // 4. Redirect to dashboard
     return NextResponse.redirect(`${origin}/dashboard`);
   } catch (err: any) {
     console.error("Auth Callback GET Error:", err);
