@@ -26,7 +26,7 @@ export default async function Home() {
           </h1>
 
           <p className="text-base md:text-lg text-neutral-500 leading-relaxed">
-            Streamlyned is an AI-native project management platform designed specifically for small teams/solo founders. By replacing scattered channels with unified workspaces &  reduce daily cognitive load.
+            Streamlyned is an AI-native project management platform designed specifically for small teams & solo founders. By replacing scattered channels with unified workspaces & reduce daily cognitive load.
           </p>
 
           <div className="space-y-4 pt-4 border-t border-border-custom max-w-lg">
