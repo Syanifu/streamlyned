@@ -3,9 +3,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY ?? "",
-});
+
 
 async function getAiConfig(workspaceId: string) {
   try {
@@ -41,6 +39,9 @@ export async function POST(req: Request) {
     const config = await getAiConfig(session.workspace.id);
 
     // 3. Request OpenAI completion with gpt-4o
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY ?? "",
+    });
     const response = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [

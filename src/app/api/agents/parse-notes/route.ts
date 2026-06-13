@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY ?? "",
-});
+
 
 async function getAiConfigPrompt(workspaceId: string) {
   try {
@@ -56,6 +54,9 @@ export async function POST(req: Request) {
     const systemPrompt = await getAiConfigPrompt(doc.workspaceId);
 
     // 5. Query OpenAI GPT-4o
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY ?? "",
+    });
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
