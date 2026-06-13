@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { 
-  CheckCircle2, 
-  MessageSquare, 
-  MessageCircle, 
-  FileText, 
+import {
+  CheckCircle2,
+  MessageSquare,
+  MessageCircle,
+  FileText,
   Calendar,
   Archive,
-  HelpCircle
+  HelpCircle,
+  Settings
 } from "lucide-react";
 import { toggleProjectAgenticAction } from "@/app/actions/project";
 
@@ -22,6 +23,7 @@ interface ProjectHeaderProps {
   isArchived: boolean;
   isAdmin?: boolean;
   agenticEnabled?: boolean;
+  showSettings?: boolean;
 }
 
 export default function ProjectHeader({
@@ -33,6 +35,7 @@ export default function ProjectHeader({
   isArchived,
   isAdmin = false,
   agenticEnabled = true,
+  showSettings = false,
 }: ProjectHeaderProps) {
   const [agenticEnabledState, setAgenticEnabledState] = useState(agenticEnabled);
   const [isToggling, setIsToggling] = useState(false);
@@ -149,6 +152,19 @@ export default function ProjectHeader({
             </Link>
           );
         })}
+        {showSettings && (
+          <Link
+            href={`/dashboard/projects/${projectId}?tab=settings`}
+            className={`flex items-center gap-2 py-2 border-b-2 font-semibold text-xs tracking-wide uppercase transition-all ml-auto ${
+              activeTab === "settings"
+                ? "border-foreground text-foreground"
+                : "border-transparent text-neutral-500 hover:text-foreground"
+            }`}
+          >
+            <Settings size={14} />
+            <span>Settings</span>
+          </Link>
+        )}
       </div>
     </div>
   );

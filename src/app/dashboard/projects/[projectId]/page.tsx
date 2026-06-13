@@ -9,6 +9,7 @@ import ChatTab from "@/components/project/chat-tab";
 import DocsTab from "@/components/project/docs-tab";
 import CalendarTab from "@/components/project/calendar-tab";
 import CheckinsTab from "@/components/project/checkins-tab";
+import ProjectSettingsTab from "@/components/project/settings-tab";
 
 interface ProjectPageProps {
   params: Promise<{ projectId: string }>;
@@ -78,8 +79,14 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     ? (JSON.parse(currentMember.visibleTools) as string[]).filter(t => enabledProjectTools.includes(t))
     : enabledProjectTools;
 
+  const isAdminOrOwner = session.role === "OWNER" || session.role === "ADMIN";
+
   // 3. Security Check: If user manually changes URL to access forbidden tab, block them
-  if (!allowedTools.includes(tab)) {
+  // "settings" tab is always allowed for OWNER/ADMIN
+  if (tab === "settings" && !isAdminOrOwner) {
+    redirect("/dashboard");
+  }
+  if (tab !== "settings" && !allowedTools.includes(tab)) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
         <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">
@@ -218,8 +225,9 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         allowedTools={allowedTools}
         projectId={projectId}
         isArchived={project.isArchived}
-        isAdmin={session.role === "OWNER" || session.role === "ADMIN"}
+        isAdmin={isAdminOrOwner}
         agenticEnabled={project.agenticEnabled}
+        showSettings={isAdminOrOwner}
       />
 
       {/* Dynamic Tab Body */}
@@ -272,6 +280,21 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             currentUser={session.user}
             isClient={session.role === "CLIENT"}
             questions={checkInQuestions}
+          />
+        )}
+        {tab === "settings" && isAdminOrOwner && (
+          <ProjectSettingsTab
+            projectId={projectId}
+            projectName={project.name}
+            projectDescription={project.description}
+            startDate={project.startDate?.toISOString() ?? null}
+            endDate={project.endDate?.toISOString() ?? null}
+            enabledTools={JSON.parse(project.tools) as string[]}
+            isArchived={project.isArchived}
+            members={project.members}
+            workspaceUsers={allWorkspaceUsers}
+            currentUserId={session.user.id}
+            currentUserRole={session.role}
           />
         )}
       </div>
