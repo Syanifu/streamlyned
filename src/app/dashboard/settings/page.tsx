@@ -50,6 +50,8 @@ export default async function SettingsPage() {
           : null
       }
       members={members}
+      currentUserId={session.user.id}
+      currentUserRole={session.role}
     />
   );
 }

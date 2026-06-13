@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { 
   markNotificationReadAction, 
   markAllNotificationsReadAction, 
-  getSuppressionExplanationAction 
+  getSuppressionExplanationAction,
+  confirmAgentEventAction,
+  dismissAgentEventAction
 } from "@/app/actions/notifications";
-import { Bell, Check, BellOff, Info, ArrowRight } from "lucide-react";
+import { Bell, Check, BellOff, Info, ArrowRight, Calendar as CalendarIcon } from "lucide-react";
 import Link from "next/link";
 
 interface NotificationCompact {
@@ -30,6 +32,7 @@ export default function NotificationsView({ notifications = [] }: NotificationsV
   const [activeExplanationId, setActiveExplanationId] = useState<string | null>(null);
   const [explanationText, setExplanationText] = useState<string | null>(null);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
 
   const handleMarkRead = async (id: string) => {
     await markNotificationReadAction(id);
@@ -39,6 +42,28 @@ export default function NotificationsView({ notifications = [] }: NotificationsV
   const handleMarkAllRead = async () => {
     await markAllNotificationsReadAction();
     router.refresh();
+  };
+
+  const handleConfirmAgent = async (id: string) => {
+    setIsSubmitting(id);
+    const res = await confirmAgentEventAction(id);
+    setIsSubmitting(null);
+    if (res.success) {
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to confirm event");
+    }
+  };
+
+  const handleDismissAgent = async (id: string) => {
+    setIsSubmitting(id);
+    const res = await dismissAgentEventAction(id);
+    setIsSubmitting(null);
+    if (res.success) {
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to dismiss event");
+    }
   };
 
   const handleExplainSuppression = async (id: string) => {
@@ -105,6 +130,9 @@ export default function NotificationsView({ notifications = [] }: NotificationsV
                   isExplaining={activeExplanationId === n.id}
                   explanationText={explanationText}
                   loadingExplanation={loadingExplanation}
+                  onConfirmAgent={() => handleConfirmAgent(n.id)}
+                  onDismissAgent={() => handleDismissAgent(n.id)}
+                  isSubmitting={isSubmitting === n.id}
                 />
               ))
             )}
@@ -127,6 +155,9 @@ export default function NotificationsView({ notifications = [] }: NotificationsV
                   isExplaining={activeExplanationId === n.id}
                   explanationText={explanationText}
                   loadingExplanation={loadingExplanation}
+                  onConfirmAgent={() => {}}
+                  onDismissAgent={() => {}}
+                  isSubmitting={false}
                 />
               ))}
             </div>
@@ -145,6 +176,9 @@ function NotificationRow({
   isExplaining,
   explanationText,
   loadingExplanation,
+  onConfirmAgent,
+  onDismissAgent,
+  isSubmitting,
 }: {
   notification: any;
   onMarkRead: () => void;
@@ -152,7 +186,43 @@ function NotificationRow({
   isExplaining: boolean;
   explanationText: string | null;
   loadingExplanation: boolean;
+  onConfirmAgent: () => void;
+  onDismissAgent: () => void;
+  isSubmitting: boolean;
 }) {
+  const isAgentConfirm = notification.type === "AGENT_CONFIRM";
+
+  if (isAgentConfirm && !notification.isRead) {
+    return (
+      <div className="p-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/10 flex items-center justify-between gap-4 border-l-4 border-indigo-500 animate-in fade-in duration-200">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <CalendarIcon size={16} className="text-indigo-500 shrink-0" />
+          <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+            <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+              Next sync: "{notification.title}"
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onConfirmAgent}
+            disabled={isSubmitting}
+            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
+          >
+            Add to calendar
+          </button>
+          <button
+            onClick={onDismissAgent}
+            disabled={isSubmitting}
+            className="px-2.5 py-1.5 border border-border-custom hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`p-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/10 flex flex-col gap-2 group border-l-4 ${
       notification.priority === "P1" ? "border-red-500 bg-red-500/5 dark:bg-red-950/10" : "border-transparent"
@@ -187,7 +257,7 @@ function NotificationRow({
               )}
             </div>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              {notification.message}
+              {isAgentConfirm ? "Scheduled to calendar successfully." : notification.message}
             </p>
             <span className="text-[10px] text-neutral-400 font-mono mt-1 block">
               {new Date(notification.createdAt).toLocaleString()}

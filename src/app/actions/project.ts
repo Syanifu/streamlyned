@@ -74,3 +74,23 @@ export async function createProjectAction(data: {
     return { success: false, error: error.message };
   }
 }
+
+export async function toggleProjectAgenticAction(projectId: string, enabled: boolean) {
+  try {
+    const session = await requireSession();
+
+    if (session.role !== "OWNER" && session.role !== "ADMIN") {
+      throw new Error("Access Denied: Only admins or owners can change project settings.");
+    }
+
+    const project = await db.project.update({
+      where: { id: projectId, workspaceId: session.workspace.id },
+      data: { agenticEnabled: enabled },
+    });
+
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    return { success: true, project };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

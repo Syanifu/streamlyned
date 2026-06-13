@@ -119,6 +119,14 @@ export default async function DmPage({ searchParams }: DmPageProps) {
                 id: true,
                 name: true,
                 avatarUrl: true,
+                memberships: {
+                  where: {
+                    workspaceId: session.workspace.id,
+                  },
+                  select: {
+                    role: true,
+                  },
+                },
               },
             },
             reactions: {

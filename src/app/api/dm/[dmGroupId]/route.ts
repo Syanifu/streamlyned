@@ -43,6 +43,14 @@ export async function GET(
             id: true,
             name: true,
             avatarUrl: true,
+            memberships: {
+              where: {
+                workspaceId: session.workspace.id,
+              },
+              select: {
+                role: true,
+              },
+            },
           },
         },
         reactions: {

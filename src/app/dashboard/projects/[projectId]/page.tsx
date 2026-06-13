@@ -218,6 +218,8 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         allowedTools={allowedTools}
         projectId={projectId}
         isArchived={project.isArchived}
+        isAdmin={session.role === "OWNER" || session.role === "ADMIN"}
+        agenticEnabled={project.agenticEnabled}
       />
 
       {/* Dynamic Tab Body */}

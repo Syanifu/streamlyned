@@ -123,3 +123,120 @@ export async function inviteUserAction(email: string, name: string, role: string
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Changes a workspace member's role. OWNER only.
+ */
+export async function changeUserRoleAction(memberId: string, newRole: string) {
+  try {
+    const session = await requireSession();
+
+    if (session.role !== "OWNER") {
+      throw new Error("Access Denied: Only the workspace owner can change member roles.");
+    }
+
+    const ALLOWED_ROLES = ["ADMIN", "MEMBER", "CLIENT"];
+    if (!ALLOWED_ROLES.includes(newRole)) {
+      throw new Error("Invalid role.");
+    }
+
+    const member = await db.workspaceMember.findUnique({
+      where: { id: memberId },
+      include: { user: true },
+    });
+
+    if (!member || member.workspaceId !== session.workspace.id) {
+      throw new Error("Member not found.");
+    }
+
+    if (member.userId === session.user.id) {
+      throw new Error("You cannot change your own role.");
+    }
+
+    if (member.role === "OWNER") {
+      throw new Error("Cannot change the role of another owner.");
+    }
+
+    await db.workspaceMember.update({
+      where: { id: memberId },
+      data: { role: newRole },
+    });
+
+    await db.auditLog.create({
+      data: {
+        workspaceId: session.workspace.id,
+        entityType: "USER",
+        entityId: member.userId,
+        userId: session.user.id,
+        action: "UPDATE",
+        description: `changed role of "${member.user.name}" from ${member.role} to ${newRole}`,
+      },
+    });
+
+    revalidatePath("/dashboard/settings");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Removes a user from the workspace and all its projects. OWNER only.
+ */
+export async function removeWorkspaceMemberAction(memberId: string) {
+  try {
+    const session = await requireSession();
+
+    if (session.role !== "OWNER") {
+      throw new Error("Access Denied: Only the workspace owner can remove members.");
+    }
+
+    const member = await db.workspaceMember.findUnique({
+      where: { id: memberId },
+      include: { user: true },
+    });
+
+    if (!member || member.workspaceId !== session.workspace.id) {
+      throw new Error("Member not found.");
+    }
+
+    if (member.userId === session.user.id) {
+      throw new Error("You cannot remove yourself from the workspace.");
+    }
+
+    if (member.role === "OWNER") {
+      throw new Error("Cannot remove another owner.");
+    }
+
+    // Remove from all projects within this workspace
+    const workspaceProjects = await db.project.findMany({
+      where: { workspaceId: session.workspace.id },
+      select: { id: true },
+    });
+
+    await db.projectMember.deleteMany({
+      where: {
+        userId: member.userId,
+        projectId: { in: workspaceProjects.map((p) => p.id) },
+      },
+    });
+
+    await db.workspaceMember.delete({ where: { id: memberId } });
+
+    await db.auditLog.create({
+      data: {
+        workspaceId: session.workspace.id,
+        entityType: "USER",
+        entityId: member.userId,
+        userId: session.user.id,
+        action: "DELETE",
+        description: `removed user "${member.user.name}" from the workspace`,
+      },
+    });
+
+    revalidatePath("/dashboard/settings");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

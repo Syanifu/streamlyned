@@ -9,9 +9,10 @@ import { PRIORITY_MAP } from "@/components/project/tasks-tab";
 interface TodayViewProps {
   initialItems: TodayItem[];
   userName: string;
+  events?: any[];
 }
 
-export default function TodayView({ initialItems, userName }: TodayViewProps) {
+export default function TodayView({ initialItems, userName, events = [] }: TodayViewProps) {
   const [items, setItems] = useState<TodayItem[]>(initialItems);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
@@ -142,7 +143,7 @@ export default function TodayView({ initialItems, userName }: TodayViewProps) {
       </div>
 
       {/* Main Grid or Calm Empty State */}
-      {!hasUrgentWork && finalWatching.length === 0 ? (
+      {!hasUrgentWork && finalWatching.length === 0 && events.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center py-20 text-center space-y-4">
           <Moon size={28} className="text-indigo-400 dark:text-indigo-500/80 animate-pulse" />
           <h2 className="text-base font-medium text-neutral-800 dark:text-neutral-200">
@@ -154,6 +155,61 @@ export default function TodayView({ initialItems, userName }: TodayViewProps) {
         </div>
       ) : (
         <div className="space-y-10">
+          {/* Today's Events Section */}
+          {events.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                  Today's Events
+                </h3>
+                <span className="text-[10px] text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.2 rounded-full font-mono">
+                  {events.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {events.map((event) => {
+                  const styles = PRIORITY_MAP[event.priority] || PRIORITY_MAP.P4;
+                  const isAgentCreated = event.source && event.source !== "manual";
+                  const isProgressEvent = event.source === "agent_progress";
+
+                  const timeRangeStr = isProgressEvent
+                    ? `${event.progressPct ?? 0}% complete`
+                    : `${new Date(event.startAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - ${new Date(event.endAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+
+                  return (
+                    <div 
+                      key={event.id} 
+                      className={`relative p-4 bg-surface border border-border-custom hover:border-neutral-350 dark:hover:border-neutral-700 rounded-xl flex flex-col justify-between border-l-4 ${styles.border} transition-all shadow-xs`}
+                    >
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate" title={event.title}>
+                            {event.title}
+                          </span>
+                          <span className="text-[9px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.2 rounded shrink-0">
+                            {event.project?.name}
+                          </span>
+                          {isAgentCreated && (
+                            <span className="text-[8px] bg-neutral-100 dark:bg-neutral-850 text-neutral-400 px-1.5 py-0.2 rounded-full font-mono uppercase tracking-wider font-extrabold scale-90">
+                              auto
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-neutral-450 flex items-center gap-1.5">
+                          {isProgressEvent ? (
+                            <span className="font-semibold text-brand-success">{timeRangeStr}</span>
+                          ) : (
+                            <span>{timeRangeStr}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Section 1: Do Today */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">

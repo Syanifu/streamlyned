@@ -18,7 +18,12 @@ interface ChatMessageCompact {
   id: string;
   content: string;
   createdAt: string;
-  user: { id: string; name: string; avatarUrl: string | null };
+  user: { 
+    id: string; 
+    name: string; 
+    avatarUrl: string | null;
+    memberships?: { role: string }[];
+  };
   reactions: { id: string; emoji: string; user: { id: string; name: string } }[];
   files: { id: string; fileName: string; fileUrl: string; fileSize: number }[];
 }
@@ -256,6 +261,9 @@ export default function ChatTab({
         ) : (
           messages.map((m) => {
             const isMe = m.user.id === currentUser.id;
+            const isClientUser = isMe 
+              ? isClient 
+              : m.user.memberships?.[0]?.role === "CLIENT";
             
             // Group reactions by emoji type
             const reactionsMap: Record<string, typeof m.reactions> = {};
@@ -289,10 +297,10 @@ export default function ChatTab({
                   </div>
 
                   <div
-                    className={`p-3 rounded-lg text-xs leading-relaxed ${
-                      isMe
-                        ? "bg-neutral-900 text-white dark:bg-neutral-800 dark:text-neutral-100"
-                        : "bg-neutral-50 dark:bg-neutral-900 border border-border-custom text-neutral-800 dark:text-neutral-200"
+                    className={`p-3 rounded-lg text-xs leading-relaxed text-white ${
+                      isClientUser
+                        ? "bg-emerald-600 dark:bg-emerald-600 border-transparent"
+                        : "bg-blue-600 dark:bg-blue-600 border-transparent"
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{m.content}</p>

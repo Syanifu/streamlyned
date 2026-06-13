@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "mock-key-for-compilation",
+  apiKey: process.env.OPENAI_API_KEY ?? "",
 });
 
 async function getAiConfig(workspaceId: string) {

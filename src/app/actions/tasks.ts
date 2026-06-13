@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/auth";
 import { parseNaturalDate } from "@/lib/date-parser";
 import { revalidatePath } from "next/cache";
 import { indexEntity } from "@/lib/ai/search";
+import { syncProjectProgress } from "@/lib/agents/progress-sync";
 
 /**
  * Creates a task in a list
@@ -170,6 +171,12 @@ export async function updateTaskAction(
       data: updateData,
     });
 
+    if (data.isCompleted !== undefined && data.isCompleted !== task.isCompleted) {
+      await syncProjectProgress(projectId).catch((err) =>
+        console.error("Failed to sync project progress on task completion:", err)
+      );
+    }
+
     // Re-index task in vector search
     await indexEntity(session.workspace.id, "TASK", taskId, projectId, updatedTask.title + " " + (updatedTask.notes || ""));
 
@@ -220,6 +227,12 @@ export async function moveTaskAction(
     });
     if (!projectMember) throw new Error("Access Denied.");
 
+    // Verify target list belongs to the same project
+    const targetList = await db.taskList.findUnique({ where: { id: targetListId } });
+    if (!targetList || targetList.projectId !== projectId) {
+      throw new Error("Access Denied: Invalid target list.");
+    }
+
     const sourceListId = task.taskListId;
 
     const updatedTask = await db.task.update({
@@ -260,8 +273,7 @@ export async function moveTaskAction(
 export async function addCommentAction(
   projectId: string,
   taskId: string,
-  content: string,
-  isClientComment: boolean
+  content: string
 ) {
   try {
     const session = await requireSession();
@@ -278,7 +290,7 @@ export async function addCommentAction(
         taskId,
         userId: session.user.id,
         content: content.trim(),
-        isClientComment,
+        isClientComment: session.role === "CLIENT",
       },
     });
 

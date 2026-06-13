@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   CheckCircle2, 
@@ -11,6 +11,7 @@ import {
   Archive,
   HelpCircle
 } from "lucide-react";
+import { toggleProjectAgenticAction } from "@/app/actions/project";
 
 interface ProjectHeaderProps {
   projectName: string;
@@ -19,6 +20,8 @@ interface ProjectHeaderProps {
   allowedTools: string[];
   projectId: string;
   isArchived: boolean;
+  isAdmin?: boolean;
+  agenticEnabled?: boolean;
 }
 
 export default function ProjectHeader({
@@ -28,7 +31,29 @@ export default function ProjectHeader({
   allowedTools,
   projectId,
   isArchived,
+  isAdmin = false,
+  agenticEnabled = true,
 }: ProjectHeaderProps) {
+  const [agenticEnabledState, setAgenticEnabledState] = useState(agenticEnabled);
+  const [isToggling, setIsToggling] = useState(false);
+
+  useEffect(() => {
+    setAgenticEnabledState(agenticEnabled);
+  }, [agenticEnabled]);
+
+  const handleToggleAgentic = async () => {
+    if (isToggling) return;
+    setIsToggling(true);
+    const newVal = !agenticEnabledState;
+    setAgenticEnabledState(newVal);
+    const res = await toggleProjectAgenticAction(projectId, newVal);
+    if (!res.success) {
+      alert(res.error || "Failed to update project settings");
+      setAgenticEnabledState(!newVal);
+    }
+    setIsToggling(false);
+  };
+
   // Mapping tools to their display label, icon, and tab query name
   const toolSpecs: Record<string, { label: string; icon: React.ReactNode }> = {
     tasks: {
@@ -79,6 +104,26 @@ export default function ProjectHeader({
             </p>
           )}
         </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2 bg-surface border border-border-custom px-3 py-1.5 rounded-lg shadow-sm">
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+              Agentic Features
+            </span>
+            <button
+              onClick={handleToggleAgentic}
+              disabled={isToggling}
+              className={`w-8 h-4.5 rounded-full transition-colors relative flex items-center shrink-0 ${
+                agenticEnabledState ? "bg-indigo-600" : "bg-neutral-300 dark:bg-neutral-700"
+              }`}
+            >
+              <span
+                className={`w-3.5 h-3.5 bg-white rounded-full shadow absolute transition-all ${
+                  agenticEnabledState ? "right-0.5" : "left-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Navigation tabs */}

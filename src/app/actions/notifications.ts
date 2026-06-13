@@ -97,3 +97,92 @@ export async function getSuppressionExplanationAction(notificationId: string) {
     return { success: false, error: error.message };
   }
 }
+
+export async function confirmAgentEventAction(notificationId: string) {
+  try {
+    const session = await requireSession();
+
+    const notification = await db.notification.findUnique({
+      where: { id: notificationId, userId: session.user.id }
+    });
+
+    if (!notification || notification.type !== "AGENT_CONFIRM") {
+      throw new Error("Invalid confirmation request");
+    }
+
+    const payload = JSON.parse(notification.message);
+    const { title, date, time, priority, documentId, projectId } = payload;
+
+    // Verify the user is a member of the target project
+    const projectMember = await db.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: session.user.id } },
+    });
+    if (!projectMember) throw new Error("Access Denied: Not a member of this project.");
+
+    const timeStr = time || "09:00";
+    const startAt = new Date(`${date}T${timeStr}:00`);
+    const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+
+    const event = await db.calendarEvent.create({
+      data: {
+        workspaceId: notification.workspaceId,
+        projectId,
+        title,
+        description: `Extracted from notes: "${payload.rawText}"`,
+        startAt,
+        endAt,
+        priority: priority || "P4",
+        source: 'agent_notes',
+        sourceRef: documentId,
+      }
+    });
+
+    await db.calendarEventAttendee.create({
+      data: {
+        eventId: event.id,
+        userId: session.user.id,
+      },
+    });
+
+    await db.auditLog.create({
+      data: {
+        workspaceId: notification.workspaceId,
+        projectId,
+        entityType: "EVENT",
+        entityId: event.id,
+        userId: session.user.id,
+        action: "CREATE",
+        description: `scheduled event "${event.title}" from meeting notes`,
+        priority: event.priority,
+      },
+    });
+
+    await db.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true }
+    });
+
+    revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard");
+    return { success: true, event };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function dismissAgentEventAction(notificationId: string) {
+  try {
+    const session = await requireSession();
+
+    await db.notification.update({
+      where: { id: notificationId, userId: session.user.id },
+      data: { isRead: true }
+    });
+
+    revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

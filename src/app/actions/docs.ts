@@ -35,6 +35,22 @@ export async function createDocAction(
     // Index document in vector search
     await indexEntity(session.workspace.id, "DOC", doc.id, projectId, doc.title + " " + doc.content);
 
+    // Trigger meeting notes parsing agent asynchronously
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    fetch(`${baseUrl}/api/agents/parse-notes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.INTERNAL_API_SECRET}`,
+      },
+      body: JSON.stringify({
+        documentId: doc.id,
+        projectId: doc.projectId,
+        documentText: doc.content,
+        authorId: session.user.id,
+      }),
+    }).catch((err) => console.error("Error triggering parse-notes agent:", err));
+
     // Create version 1
     await db.docVersion.create({
       data: {
@@ -106,6 +122,19 @@ export async function updateDocAction(
 
     // Index updated document in vector search
     await indexEntity(session.workspace.id, "DOC", docId, projectId, updatedDoc.title + " " + updatedDoc.content);
+
+    // Trigger meeting notes parsing agent asynchronously
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    fetch(`${baseUrl}/api/agents/parse-notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        documentId: docId,
+        projectId: projectId,
+        documentText: updatedDoc.content,
+        authorId: session.user.id,
+      }),
+    }).catch((err) => console.error("Error triggering parse-notes agent:", err));
 
     // Write new version snapshot
     await db.docVersion.create({

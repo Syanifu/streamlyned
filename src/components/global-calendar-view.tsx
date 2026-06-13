@@ -7,7 +7,7 @@ import {
   Video, 
   Clock,
   Filter,
-  CheckSquare
+  Check
 } from "lucide-react";
 
 interface ProjectInfo {
@@ -26,6 +26,9 @@ interface CalendarEventCompact {
   videoCallLink: string | null;
   projectId: string;
   priority: string;
+  source?: string | null;
+  sourceRef?: string | null;
+  progressPct?: number | null;
 }
 
 interface TaskDueCompact {
@@ -141,6 +144,8 @@ export default function GlobalCalendarView({
 
               // Filter events and tasks for this day
               const dayEvents = filteredEvents.filter((e) => new Date(e.startAt).toDateString() === dayStr);
+              const progressEvents = dayEvents.filter((e) => e.source === "agent_progress");
+              const regularEvents = dayEvents.filter((e) => e.source !== "agent_progress");
               const dayTasks = filteredTasks.filter((t) => new Date(t.dueDateEnd).toDateString() === dayStr);
 
               return (
@@ -161,9 +166,8 @@ export default function GlobalCalendarView({
 
                   {/* Items list */}
                   <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0 scrollbar-none">
-                    {/* Events */}
-                    {/* Events */}
-                    {dayEvents.map((e) => {
+                    {/* Regular Events */}
+                    {regularEvents.map((e) => {
                       const styles = getEventStyles(e.priority || "P4");
                       return (
                         <button
@@ -202,6 +206,52 @@ export default function GlobalCalendarView({
                         </span>
                       );
                     })}
+
+                    {/* Progress Events */}
+                    {progressEvents.map((e) => {
+                      const pct = e.progressPct ?? 0;
+                      let barColor = "bg-rose-500 dark:bg-rose-600";
+                      let bgBorderText = "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-350";
+                      
+                      if (pct >= 80) {
+                        barColor = "bg-emerald-500 dark:bg-emerald-600";
+                        bgBorderText = "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/40 dark:text-emerald-350";
+                      } else if (pct >= 40) {
+                        barColor = "bg-amber-500 dark:bg-amber-600";
+                        bgBorderText = "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-900/40 dark:text-amber-350";
+                      }
+
+                      const isComplete = pct === 100;
+                      
+                      return (
+                        <button
+                          key={e.id}
+                          onClick={() => setSelectedEvent(e)}
+                          className={`w-full text-left p-1 rounded border ${bgBorderText} flex flex-col gap-0.5 mt-0.5 hover:opacity-90 transition-opacity`}
+                          title={`[Progress] ${e.title}: ${isComplete ? "Complete" : `${pct}%`}`}
+                        >
+                          <div className="flex items-center justify-between gap-1 w-full min-w-0">
+                            <span className="truncate text-[8px] font-bold tracking-tight">
+                              {e.title}
+                            </span>
+                            {isComplete ? (
+                              <span className="flex items-center gap-0.5 text-[7px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                                <Check size={8} strokeWidth={3} />
+                                <span>Complete</span>
+                              </span>
+                            ) : (
+                              <span className="text-[7px] font-mono font-bold shrink-0">{pct}%</span>
+                            )}
+                          </div>
+                          <div className="w-full h-1 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-0.5">
+                            <div 
+                              className={`h-full rounded-full ${barColor}`} 
+                              style={{ width: `${pct}%` }} 
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -238,6 +288,34 @@ export default function GlobalCalendarView({
               <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                 {selectedEvent.title}
               </h4>
+
+              {selectedEvent.source === "agent_progress" && (
+                <div className="border border-border-custom p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900/30 space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
+                      Project Progress
+                    </span>
+                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                      {selectedEvent.progressPct ?? 0}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${
+                        (selectedEvent.progressPct ?? 0) >= 80 
+                          ? "bg-emerald-500" 
+                          : (selectedEvent.progressPct ?? 0) >= 40 
+                            ? "bg-amber-500" 
+                            : "bg-rose-500"
+                      }`}
+                      style={{ width: `${selectedEvent.progressPct ?? 0}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-neutral-405 leading-relaxed text-neutral-400">
+                    This is an automatically generated event tracking the completion rate of project tasks.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2.5 text-xs text-neutral-500">
                 <div className="flex items-center gap-2">

@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveAiSettingsAction, inviteUserAction } from "@/app/actions/settings";
-import { Settings, Users, Sparkles, UserPlus, ShieldAlert, Check, RefreshCw, Key } from "lucide-react";
+import { saveAiSettingsAction, inviteUserAction, changeUserRoleAction, removeWorkspaceMemberAction } from "@/app/actions/settings";
+import { Settings, Users, Sparkles, UserPlus, ShieldAlert, Check, RefreshCw, Key, Trash2 } from "lucide-react";
 
 interface MemberCompact {
   id: string;
@@ -24,11 +24,15 @@ interface SettingsViewProps {
     embeddingsModel: string;
   } | null;
   members: MemberCompact[];
+  currentUserId: string;
+  currentUserRole: string;
 }
 
 export default function SettingsView({
   initialSettings,
   members = [],
+  currentUserId,
+  currentUserRole,
 }: SettingsViewProps) {
   const router = useRouter();
 
@@ -37,7 +41,7 @@ export default function SettingsView({
   const [apiKey, setApiKey] = useState(initialSettings?.apiKey || "");
   const [completionModel, setCompletionModel] = useState(initialSettings?.completionModel || "gpt-4o-mini");
   const [embeddingsModel, setEmbeddingsModel] = useState(initialSettings?.embeddingsModel || "text-embedding-3-small");
-  
+
   const [isSavingAi, setIsSavingAi] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
@@ -49,6 +53,37 @@ export default function SettingsView({
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  // Member Management States
+  const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
+  const [memberError, setMemberError] = useState<string | null>(null);
+
+  const isOwner = currentUserRole === "OWNER";
+
+  const handleRoleChange = async (memberId: string, newRole: string) => {
+    setLoadingMemberId(memberId);
+    setMemberError(null);
+    const res = await changeUserRoleAction(memberId, newRole);
+    if (res.success) {
+      router.refresh();
+    } else {
+      setMemberError(res.error || "Failed to change role");
+    }
+    setLoadingMemberId(null);
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`Remove ${memberName} from this workspace? This will also remove them from all projects.`)) return;
+    setLoadingMemberId(memberId);
+    setMemberError(null);
+    const res = await removeWorkspaceMemberAction(memberId);
+    if (res.success) {
+      router.refresh();
+    } else {
+      setMemberError(res.error || "Failed to remove member");
+    }
+    setLoadingMemberId(null);
+  };
 
   // Save AI Settings
   const handleSaveAi = async (e: React.FormEvent) => {
@@ -327,33 +362,73 @@ export default function SettingsView({
           </div>
 
           {/* Members List */}
-          <div className="bg-surface border border-border-custom rounded-xl p-6 space-y-4 shadow-sm max-h-80 overflow-y-auto">
+          <div className="bg-surface border border-border-custom rounded-xl p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-2 text-neutral-800 dark:text-neutral-200">
               <Users size={16} className="text-neutral-400" />
-              <h2 className="text-sm font-semibold"> Roster ({members.length})</h2>
+              <h2 className="text-sm font-semibold">Roster ({members.length})</h2>
             </div>
 
-            <div className="divide-y divide-border-custom">
-              {members.map((m) => (
-                <div key={m.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <img
-                      src={m.user.avatarUrl || ""}
-                      alt={m.user.name}
-                      className="w-6.5 h-6.5 rounded-full shrink-0"
-                    />
-                    <div className="min-w-0 flex flex-col">
-                      <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
-                        {m.user.name}
-                      </span>
-                      <span className="text-[9px] text-neutral-400 truncate">{m.user.email}</span>
+            {memberError && (
+              <div className="text-[10px] bg-red-50 border border-red-100 text-brand-danger p-2 rounded-lg">
+                {memberError}
+              </div>
+            )}
+
+            <div className="divide-y divide-border-custom max-h-96 overflow-y-auto">
+              {members.map((m) => {
+                const isSelf = m.user.id === currentUserId;
+                const isTargetOwner = m.role === "OWNER";
+                const canManage = isOwner && !isSelf && !isTargetOwner;
+                const isLoading = loadingMemberId === m.id;
+
+                return (
+                  <div key={m.id} className="py-3 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img
+                        src={m.user.avatarUrl || ""}
+                        alt={m.user.name}
+                        className="w-6 h-6 rounded-full shrink-0"
+                      />
+                      <div className="min-w-0 flex flex-col">
+                        <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                          {m.user.name}
+                          {isSelf && <span className="ml-1 text-[9px] text-neutral-400 font-normal">(you)</span>}
+                        </span>
+                        <span className="text-[9px] text-neutral-400 truncate">{m.user.email}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {canManage ? (
+                        <>
+                          <select
+                            value={m.role}
+                            disabled={isLoading}
+                            onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                            className="text-[10px] px-1.5 py-1 border border-border-custom bg-surface rounded-md focus:outline-none focus:border-brand-accent disabled:opacity-50"
+                          >
+                            <option value="MEMBER">MEMBER</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="CLIENT">CLIENT</option>
+                          </select>
+                          <button
+                            disabled={isLoading}
+                            onClick={() => handleRemoveMember(m.id, m.user.name)}
+                            className="p-1 rounded-md text-neutral-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-40 transition-colors"
+                            title="Remove from workspace"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono text-[9px] px-1.5 py-0.5 rounded">
+                          {m.role}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <span className="bg-neutral-100 text-neutral-500 font-mono text-[9px] px-1.5 py-0.2 rounded shrink-0">
-                    {m.role}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

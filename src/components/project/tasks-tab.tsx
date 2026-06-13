@@ -443,8 +443,7 @@ export default function TasksTab({
     const res = await addCommentAction(
       projectId,
       selectedTaskId,
-      commentText,
-      isClient
+      commentText
     );
 
     if (res.success) {
