@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { 
-  MessageSquare, 
-  FileText, 
-  HelpCircle, 
-  Filter, 
+import {
+  MessageSquare,
+  FileText,
+  Filter,
   Search,
   Paperclip,
   User,
   ArrowRight,
-  ExternalLink
 } from "lucide-react";
 
 interface ProjectItem {
@@ -49,21 +47,11 @@ interface AttachmentFeedItem {
   projectId: string;
 }
 
-interface CheckinFeedItem {
-  id: string;
-  content: string;
-  createdAt: string;
-  user: { name: string; avatarUrl: string | null };
-  questionText: string;
-  projectId: string;
-}
-
 interface EverythingDashboardViewProps {
   projects: ProjectItem[];
   comments: CommentFeedItem[];
   docs: DocFeedItem[];
   attachments: AttachmentFeedItem[];
-  checkins: CheckinFeedItem[];
   isClient: boolean;
 }
 
@@ -72,12 +60,9 @@ export default function EverythingDashboardView({
   comments,
   docs,
   attachments,
-  checkins,
   isClient,
 }: EverythingDashboardViewProps) {
-  const [activeTab, setActiveTab] = useState<"comments" | "files" | "checkins">(
-    "comments"
-  );
+  const [activeTab, setActiveTab] = useState<"comments" | "files">("comments");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -126,11 +111,6 @@ export default function EverythingDashboardView({
   const filteredAttachments = filterBySearch(
     filterByProject(attachments),
     ["fileName", "taskName"]
-  );
-
-  const filteredCheckins = filterBySearch(
-    filterByProject(checkins),
-    ["content", "questionText", "user"]
   );
 
   return (
@@ -197,19 +177,6 @@ export default function EverythingDashboardView({
             <span>Files & Docs ({filteredDocs.length + filteredAttachments.length})</span>
           </button>
 
-          {!isClient && (
-            <button
-              onClick={() => setActiveTab("checkins")}
-              className={`text-xs font-bold uppercase tracking-wider pb-1.5 border-b-2 transition-all flex items-center gap-1.5 ${
-                activeTab === "checkins"
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-neutral-500 hover:text-foreground"
-              }`}
-            >
-              <HelpCircle size={13} />
-              <span>Check-in Logs ({filteredCheckins.length})</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -362,63 +329,6 @@ export default function EverythingDashboardView({
           </div>
         )}
 
-        {/* TAB 3: Check-in Logs Feed */}
-        {activeTab === "checkins" && !isClient && (
-          <div className="space-y-4 max-w-3xl">
-            {filteredCheckins.length > 0 ? (
-              filteredCheckins.map((ans) => (
-                <div 
-                  key={ans.id}
-                  className="bg-surface border border-border-custom rounded-xl p-5 space-y-3 shadow-xs"
-                >
-                  <div className="flex items-center justify-between border-b border-border-custom pb-2.5 text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">
-                    <div className="flex items-center gap-2">
-                      <span>{getProjectName(ans.projectId)}</span>
-                      <span>•</span>
-                      <span>Check-in Answer</span>
-                    </div>
-                    <span className="text-[9px] text-neutral-400 font-mono">
-                      {new Date(ans.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-450 font-bold">
-                      <HelpCircle size={13} />
-                      <span>Q: "{ans.questionText}"</span>
-                    </div>
-
-                    <div className="flex gap-3 text-xs pl-3 border-l-2 border-neutral-200 dark:border-neutral-800">
-                      {ans.user.avatarUrl ? (
-                        <img
-                          src={ans.user.avatarUrl}
-                          alt={ans.user.name}
-                          className="w-7 h-7 rounded-full shrink-0 border border-border-custom"
-                        />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center shrink-0 border border-border-custom">
-                          <User size={13} className="text-neutral-500" />
-                        </div>
-                      )}
-                      <div className="space-y-0.5">
-                        <span className="font-bold text-neutral-800 dark:text-neutral-100 block">
-                          {ans.user.name}
-                        </span>
-                        <p className="text-neutral-600 dark:text-neutral-350 leading-relaxed whitespace-pre-wrap">
-                          {ans.content}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12 border border-dashed border-border-custom rounded-xl">
-                <p className="text-xs text-neutral-400 italic">No check-in logs found.</p>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

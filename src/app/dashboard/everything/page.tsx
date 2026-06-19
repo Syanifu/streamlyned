@@ -30,8 +30,8 @@ export default async function EverythingPage() {
 
   const projectIds = projects.map((p) => p.id);
 
-  // 2, 3, 4 & 5. Fetch comments, docs, task attachments, and check-in answers in parallel
-  const [comments, docs, taskAttachments, checkInAnswers] = await Promise.all([
+  // 2, 3 & 4. Fetch comments, docs, and task attachments in parallel
+  const [comments, docs, taskAttachments] = await Promise.all([
     db.comment.findMany({
       where: {
         workspaceId: session.workspace.id,
@@ -118,30 +118,6 @@ export default async function EverythingPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
-    session.role !== "CLIENT"
-      ? db.checkInAnswer.findMany({
-          where: {
-            question: {
-              projectId: { in: projectIds },
-            },
-          },
-          include: {
-            user: {
-              select: {
-                name: true,
-                avatarUrl: true,
-              },
-            },
-            question: {
-              select: {
-                question: true,
-                projectId: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        })
-      : Promise.resolve([])
   ]);
 
   // Format dates for props safety
@@ -175,15 +151,6 @@ export default async function EverythingPage() {
     projectId: a.task.projectId,
   }));
 
-  const formattedCheckins = checkInAnswers.map((ans) => ({
-    id: ans.id,
-    content: ans.content,
-    createdAt: ans.createdAt.toISOString(),
-    user: ans.user,
-    questionText: ans.question.question,
-    projectId: ans.question.projectId,
-  }));
-
   const formattedProjects = projects.map((p) => ({
     id: p.id,
     name: p.name,
@@ -205,7 +172,6 @@ export default async function EverythingPage() {
         comments={formattedComments}
         docs={formattedDocs}
         attachments={formattedAttachments}
-        checkins={formattedCheckins}
         isClient={session.role === "CLIENT"}
       />
     </div>

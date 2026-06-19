@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, UserPlus, UserMinus, Save, Archive, ArchiveRestore, AlertTriangle } from "lucide-react";
+import { Trash2, UserPlus, UserMinus, Save, Archive, ArchiveRestore, AlertTriangle, Zap } from "lucide-react";
 import {
   updateProjectAction,
   updateProjectToolsAction,
@@ -11,9 +11,10 @@ import {
   addProjectMemberAction,
   removeProjectMemberAction,
   updateMemberVisibleToolsAction,
+  toggleProjectAgenticAction,
 } from "@/app/actions/project";
 
-const ALL_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar", "checkins"] as const;
+const ALL_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar"] as const;
 type Tool = (typeof ALL_TOOLS)[number];
 
 const TOOL_LABELS: Record<Tool, string> = {
@@ -22,7 +23,6 @@ const TOOL_LABELS: Record<Tool, string> = {
   chat: "Chat",
   docs: "Docs",
   calendar: "Calendar",
-  checkins: "Check-ins",
 };
 
 interface ProjectMemberEntry {
@@ -52,6 +52,7 @@ interface ProjectSettingsTabProps {
   endDate: string | null;
   enabledTools: string[];
   isArchived: boolean;
+  agenticEnabled: boolean;
   members: ProjectMemberEntry[];
   workspaceUsers: WorkspaceUserEntry[];
   currentUserId: string;
@@ -66,6 +67,7 @@ export default function ProjectSettingsTab({
   endDate,
   enabledTools,
   isArchived,
+  agenticEnabled,
   members,
   workspaceUsers,
   currentUserId,
@@ -73,6 +75,20 @@ export default function ProjectSettingsTab({
 }: ProjectSettingsTabProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  // Agentic toggle
+  const [agenticOn, setAgenticOn] = useState(agenticEnabled);
+  const [isTogglingAgentic, setIsTogglingAgentic] = useState(false);
+
+  async function handleToggleAgentic() {
+    if (isTogglingAgentic) return;
+    setIsTogglingAgentic(true);
+    const next = !agenticOn;
+    setAgenticOn(next);
+    const res = await toggleProjectAgenticAction(projectId, next);
+    if (!res.success) setAgenticOn(!next);
+    setIsTogglingAgentic(false);
+  }
 
   // General section
   const [name, setName] = useState(projectName);
@@ -245,6 +261,28 @@ export default function ProjectSettingsTab({
               />
             </div>
           </div>
+          {/* Agentic Features toggle */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2">
+              <Zap size={13} className="text-indigo-500" />
+              <span className="text-sm text-foreground">Agentic Features</span>
+              <span className="text-xs text-neutral-400">— AI-powered meeting notes parsing</span>
+            </div>
+            <button
+              onClick={handleToggleAgentic}
+              disabled={!canManage || isTogglingAgentic}
+              className={`w-9 h-5 rounded-full transition-colors relative flex items-center shrink-0 disabled:opacity-50 ${
+                agenticOn ? "bg-indigo-600" : "bg-neutral-300 dark:bg-neutral-700"
+              }`}
+            >
+              <span
+                className={`w-3.5 h-3.5 bg-white rounded-full shadow absolute transition-all ${
+                  agenticOn ? "right-0.5" : "left-0.5"
+                }`}
+              />
+            </button>
+          </div>
+
           {generalMsg && (
             <p className={`text-xs ${generalMsg.type === "success" ? "text-green-600" : "text-red-500"}`}>
               {generalMsg.text}

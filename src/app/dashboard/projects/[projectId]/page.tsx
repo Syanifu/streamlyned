@@ -8,7 +8,6 @@ import DiscussionsTab from "@/components/project/discussions-tab";
 import ChatTab from "@/components/project/chat-tab";
 import DocsTab from "@/components/project/docs-tab";
 import CalendarTab from "@/components/project/calendar-tab";
-import CheckinsTab from "@/components/project/checkins-tab";
 import ProjectSettingsTab from "@/components/project/settings-tab";
 
 interface ProjectPageProps {
@@ -74,7 +73,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   const parsedTools = JSON.parse(project.tools) as string[];
-  const enabledProjectTools = parsedTools.includes("checkins") ? parsedTools : [...parsedTools, "checkins"];
+  const enabledProjectTools = parsedTools.filter((t) => t !== "checkins");
   const allowedTools = session.role === "CLIENT"
     ? (JSON.parse(currentMember.visibleTools) as string[]).filter(t => enabledProjectTools.includes(t))
     : enabledProjectTools;
@@ -189,32 +188,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     }
   }
 
-  // Query checkin questions and answers
-  let checkInQuestions: any[] = [];
-  if (tab === "checkins") {
-    checkInQuestions = await db.checkInQuestion.findMany({
-      where: {
-        projectId,
-        workspaceId: session.workspace.id,
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        answers: {
-          orderBy: { createdAt: "desc" },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
   return (
     <div className="flex-1 flex flex-col space-y-6 min-h-0">
       {/* Project title and tab navigation */}
@@ -225,8 +198,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         allowedTools={allowedTools}
         projectId={projectId}
         isArchived={project.isArchived}
-        isAdmin={isAdminOrOwner}
-        agenticEnabled={project.agenticEnabled}
         showSettings={isAdminOrOwner}
       />
 
@@ -274,14 +245,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             isClient={session.role === "CLIENT"}
           />
         )}
-        {tab === "checkins" && (
-          <CheckinsTab
-            projectId={projectId}
-            currentUser={session.user}
-            isClient={session.role === "CLIENT"}
-            questions={checkInQuestions}
-          />
-        )}
         {tab === "settings" && isAdminOrOwner && (
           <ProjectSettingsTab
             projectId={projectId}
@@ -291,6 +254,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             endDate={project.endDate?.toISOString() ?? null}
             enabledTools={JSON.parse(project.tools) as string[]}
             isArchived={project.isArchived}
+            agenticEnabled={project.agenticEnabled}
             members={project.members}
             workspaceUsers={allWorkspaceUsers}
             currentUserId={session.user.id}

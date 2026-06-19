@@ -33,6 +33,7 @@ export async function createProjectAction(data: {
         startDate: parsedStart,
         endDate: parsedEnd,
         tools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+
       },
     });
 
@@ -143,7 +144,7 @@ export async function updateProjectToolsAction(projectId: string, tools: string[
       throw new Error("Access Denied: Only admins or owners can change project tools.");
     }
 
-    const VALID_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar", "checkins"];
+    const VALID_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar"];
     const filtered = tools.filter((t) => VALID_TOOLS.includes(t));
 
     await db.project.update({
@@ -335,7 +336,7 @@ export async function updateMemberVisibleToolsAction(projectId: string, memberId
       throw new Error("Member not found.");
     }
 
-    const VALID_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar", "checkins"];
+    const VALID_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar"];
     const filtered = tools.filter((t) => VALID_TOOLS.includes(t));
 
     await db.projectMember.update({
