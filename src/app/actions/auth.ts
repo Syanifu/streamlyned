@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { setSession, clearSession } from "@/lib/auth";
+import { setSession, clearSession, getPendingOnboardingEmail, clearPendingOnboardingEmail, setOnboardedCookie } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/hash";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -11,16 +11,9 @@ import { redirect } from "next/navigation";
  */
 export async function switchUserAction(email: string, workspaceSlug: string) {
   try {
-    // Verify user exists and belongs to workspace
     const workspace = await db.workspace.findUnique({
       where: { slug: workspaceSlug },
-      include: {
-        members: {
-          include: {
-            user: true,
-          },
-        },
-      },
+      include: { members: { include: { user: true } } },
     });
 
     if (!workspace) {
@@ -38,40 +31,32 @@ export async function switchUserAction(email: string, workspaceSlug: string) {
       : "MEMBER";
 
     const member = workspace.members.find((m) => m.user.email === email);
+    let userId: string;
+
     if (member) {
       if (member.role !== targetRole) {
-        await db.workspaceMember.update({
-          where: { id: member.id },
-          data: { role: targetRole },
-        });
+        await db.workspaceMember.update({ where: { id: member.id }, data: { role: targetRole } });
       }
+      userId = member.userId;
     } else {
-      // User is not in workspace, let's see if they exist generally
       let user = await db.user.findUnique({ where: { email } });
       if (!user) {
-        // Create user on the fly if needed
         const name = email.split("@")[0];
-        const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
         user = await db.user.create({
           data: {
             email,
-            name: formattedName,
+            name: name.charAt(0).toUpperCase() + name.slice(1),
             avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${name}`,
           },
         });
       }
-      
-      // Associate them with target role
       await db.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: user.id,
-          role: targetRole,
-        },
+        data: { workspaceId: workspace.id, userId: user.id, role: targetRole },
       });
+      userId = user.id;
     }
 
-    await setSession(email, workspaceSlug);
+    await setSession(userId, workspace.id);
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -82,7 +67,7 @@ export async function switchUserAction(email: string, workspaceSlug: string) {
 }
 
 /**
- * Log out and clear session cookies
+ * Log out and revoke the current session
  */
 export async function logoutAction() {
   await clearSession();
@@ -90,7 +75,7 @@ export async function logoutAction() {
 }
 
 /**
- * Setup a brand new workspace and owner user in under 5 minutes
+ * Setup a brand new workspace and owner user
  */
 export async function createWorkspaceAction(formData: {
   workspaceName: string;
@@ -108,13 +93,9 @@ export async function createWorkspaceAction(formData: {
   const cleanSlug = workspaceSlug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-");
 
   try {
-    // Check if slug exists
     const existing = await db.workspace.findUnique({ where: { slug: cleanSlug } });
-    if (existing) {
-      return { success: false, error: `Workspace slug "${cleanSlug}" is already taken.` };
-    }
+    if (existing) return { success: false, error: `Workspace slug "${cleanSlug}" is already taken.` };
 
-    // Find or create user
     let user = await db.user.findUnique({ where: { email: email.trim() } });
     if (!user) {
       user = await db.user.create({
@@ -126,33 +107,19 @@ export async function createWorkspaceAction(formData: {
         },
       });
     } else {
-      // If user exists but has no password hash set, update it
       if (!user.passwordHash) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { passwordHash: hashPassword(password) },
-        });
+        await db.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(password) } });
       }
     }
 
-    // Create workspace
     const workspace = await db.workspace.create({
-      data: {
-        name: workspaceName.trim(),
-        slug: cleanSlug,
-      },
+      data: { name: workspaceName.trim(), slug: cleanSlug },
     });
 
-    // Create Owner membership
     await db.workspaceMember.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: user.id,
-        role: "OWNER",
-      },
+      data: { workspaceId: workspace.id, userId: user.id, role: "OWNER" },
     });
 
-    // Seed default project for the new workspace
     const project = await db.project.create({
       data: {
         workspaceId: workspace.id,
@@ -162,7 +129,6 @@ export async function createWorkspaceAction(formData: {
       },
     });
 
-    // Add user as project member
     await db.projectMember.create({
       data: {
         projectId: project.id,
@@ -171,16 +137,10 @@ export async function createWorkspaceAction(formData: {
       },
     });
 
-    // Add default Task List
     const list = await db.taskList.create({
-      data: {
-        projectId: project.id,
-        name: "General Tasks",
-        position: 1000,
-      },
+      data: { projectId: project.id, name: "General Tasks", position: 1000 },
     });
 
-    // Add default Task
     await db.task.create({
       data: {
         workspaceId: workspace.id,
@@ -192,15 +152,8 @@ export async function createWorkspaceAction(formData: {
       },
     });
 
-    // Create default AI Settings
-    await db.aiSettings.create({
-      data: {
-        workspaceId: workspace.id,
-        provider: "openai",
-      },
-    });
+    await db.aiSettings.create({ data: { workspaceId: workspace.id, provider: "openai" } });
 
-    // Log the action
     await db.auditLog.create({
       data: {
         workspaceId: workspace.id,
@@ -212,15 +165,12 @@ export async function createWorkspaceAction(formData: {
       },
     });
 
-    // Set active session
-    await setSession(user.email, workspace.slug);
-
+    await setSession(user.id, workspace.id);
   } catch (error: any) {
     console.error("Workspace creation failed:", error);
     return { success: false, error: error.message || "An unexpected error occurred." };
   }
 
-  // Redirect to dashboard page
   redirect("/dashboard");
 }
 
@@ -243,41 +193,23 @@ export async function loginAction(formData: {
   try {
     const workspace = await db.workspace.findUnique({
       where: { slug: cleanSlug },
-      include: {
-        members: {
-          include: {
-            user: true,
-          },
-        },
-      },
+      include: { members: { include: { user: true } } },
     });
 
-    if (!workspace) {
-      return { success: false, error: `Workspace slug "${cleanSlug}" not found.` };
-    }
+    if (!workspace) return { success: false, error: `Workspace slug "${cleanSlug}" not found.` };
 
     const member = workspace.members.find((m) => m.user.email === email.trim());
-    if (!member) {
-      return { success: false, error: `User with email "${email}" is not a member of this workspace.` };
-    }
+    if (!member) return { success: false, error: `User with email "${email}" is not a member of this workspace.` };
 
     const user = member.user;
     if (user.passwordHash) {
       const isMatch = verifyPassword(password, user.passwordHash);
-      if (!isMatch) {
-        return { success: false, error: "Incorrect password." };
-      }
+      if (!isMatch) return { success: false, error: "Incorrect password." };
     } else {
-      // If user has no passwordHash (seeded user), set their password now so they have one
-      await db.user.update({
-        where: { id: user.id },
-        data: { passwordHash: hashPassword(password) },
-      });
+      await db.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(password) } });
     }
 
-    // Set active session
-    await setSession(user.email, workspace.slug);
-
+    await setSession(user.id, workspace.id);
   } catch (error: any) {
     console.error("Login failed:", error);
     return { success: false, error: error.message || "An unexpected error occurred." };
@@ -288,3 +220,104 @@ export async function loginAction(formData: {
   redirect("/dashboard");
 }
 
+/**
+ * Onboarding: join an existing workspace the user was invited to.
+ */
+export async function joinWorkspaceAction(workspaceSlug: string) {
+  const email = await getPendingOnboardingEmail();
+  if (!email) return { success: false, error: "Session expired. Please sign in again." };
+
+  try {
+    const member = await db.workspaceMember.findFirst({
+      where: { workspace: { slug: workspaceSlug }, user: { email } },
+      include: { user: true, workspace: true },
+    });
+
+    if (!member) return { success: false, error: "You are not a member of this workspace." };
+
+    await setSession(member.userId, member.workspaceId);
+    await setOnboardedCookie(member.user.id);
+    await clearPendingOnboardingEmail();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+
+  redirect("/dashboard");
+}
+
+/**
+ * Onboarding: create a brand-new workspace for an invited user.
+ */
+export async function createOwnWorkspaceAction(workspaceName: string, workspaceSlug: string) {
+  const email = await getPendingOnboardingEmail();
+  if (!email) return { success: false, error: "Session expired. Please sign in again." };
+
+  const cleanSlug = workspaceSlug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-");
+
+  try {
+    const existing = await db.workspace.findUnique({ where: { slug: cleanSlug } });
+    if (existing) return { success: false, error: `Workspace slug "${cleanSlug}" is already taken.` };
+
+    const user = await db.user.findUnique({ where: { email } });
+    if (!user) return { success: false, error: "User not found." };
+
+    const workspace = await db.workspace.create({ data: { name: workspaceName.trim(), slug: cleanSlug } });
+
+    await db.workspaceMember.create({
+      data: { workspaceId: workspace.id, userId: user.id, role: "OWNER" },
+    });
+
+    const project = await db.project.create({
+      data: {
+        workspaceId: workspace.id,
+        name: "First Project",
+        description: "Welcome to your new workspace! Here is your first project.",
+        tools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+      },
+    });
+
+    await db.projectMember.create({
+      data: {
+        projectId: project.id,
+        userId: user.id,
+        visibleTools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+      },
+    });
+
+    const list = await db.taskList.create({
+      data: { projectId: project.id, name: "General Tasks", position: 1000 },
+    });
+
+    await db.task.create({
+      data: {
+        workspaceId: workspace.id,
+        taskListId: list.id,
+        projectId: project.id,
+        title: "Explore Streamlyned features",
+        notes: "Welcome! Toggle between roles using the developer banner below, and test discussions, chat, documents, and search.",
+        position: 1000,
+      },
+    });
+
+    await db.aiSettings.create({ data: { workspaceId: workspace.id, provider: "openai" } });
+
+    await db.auditLog.create({
+      data: {
+        workspaceId: workspace.id,
+        entityType: "WORKSPACE",
+        entityId: workspace.id,
+        userId: user.id,
+        action: "CREATE",
+        description: `Created workspace ${workspace.name} from onboarding`,
+      },
+    });
+
+    await setSession(user.id, workspace.id);
+    await setOnboardedCookie(user.id);
+    await clearPendingOnboardingEmail();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+
+  redirect("/dashboard");
+}

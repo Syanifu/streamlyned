@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import ProjectHeader from "@/components/project/project-header";
 import TasksTab from "@/components/project/tasks-tab";
-import DiscussionsTab from "@/components/project/discussions-tab";
 import ChatTab from "@/components/project/chat-tab";
 import DocsTab from "@/components/project/docs-tab";
 import CalendarTab from "@/components/project/calendar-tab";
@@ -30,7 +29,7 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   const { tab = "tasks", task: selectedTaskId, id: selectedId } = await searchParams;
 
   // 1. Fetch project with validation and all workspace users in parallel (multi-tenant isolation)
-  const [project, allWorkspaceUsers] = await Promise.all([
+  const [project, allWorkspaceUsers, latestChatMsg] = await Promise.all([
     db.project.findFirst({
       where: {
         id: projectId,
@@ -59,7 +58,12 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         email: true,
         avatarUrl: true,
       },
-    })
+    }),
+    db.chatMessage.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
   ]);
 
   if (!project) {
@@ -199,6 +203,8 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         projectId={projectId}
         isArchived={project.isArchived}
         showSettings={isAdminOrOwner}
+        latestChatMessageAt={latestChatMsg?.createdAt.toISOString() ?? null}
+        currentUserId={session.user.id}
       />
 
       {/* Dynamic Tab Body */}
@@ -213,14 +219,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             lists={lists}
             selectedTaskDetails={selectedTaskDetails}
             taskHistory={taskHistory}
-          />
-        )}
-        {tab === "discussions" && (
-          <DiscussionsTab
-            projectId={projectId}
-            selectedId={selectedId}
-            currentUser={session.user}
-            isClient={session.role === "CLIENT"}
           />
         )}
         {tab === "chat" && (
@@ -243,6 +241,11 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             projectId={projectId}
             currentUser={session.user}
             isClient={session.role === "CLIENT"}
+            projectMembers={project.members.map((m) => ({
+              id: m.user.id,
+              name: m.user.name,
+              avatarUrl: m.user.avatarUrl,
+            }))}
           />
         )}
         {tab === "settings" && isAdminOrOwner && (

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { setSession } from "@/lib/auth";
+import { setSession, setOnboardedCookie, setPendingOnboardingEmail } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export async function GET(request: Request) {
@@ -63,20 +63,18 @@ export async function GET(request: Request) {
     }
 
     // 2. Resolve Workspace membership
-    let targetWorkspaceSlug = "";
-    const firstMembership = await db.workspaceMember.findFirst({
+    const memberships = await db.workspaceMember.findMany({
       where: { userId: user.id },
       include: { workspace: true },
     });
 
-    if (firstMembership) {
-      // Existing user -> log into their first active workspace
-      targetWorkspaceSlug = firstMembership.workspace.slug;
-    } else {
-      // New user signup -> automatically create and seed a default workspace!
+    // Check if THIS user has already completed onboarding on this browser
+    const isOnboarded = cookieStore.get("streamlyned_onboarded")?.value === user.id;
+    const ownerMembership = memberships.find((m) => m.role === "OWNER");
+
+    if (memberships.length === 0) {
+      // Brand-new user with no memberships → auto-create workspace
       const baseSlug = email.split("@")[0].toLowerCase().replace(/[^a-z0-9-]/g, "-");
-      
-      // Ensure slug uniqueness
       let uniqueSlug = baseSlug;
       let counter = 1;
       while (await db.workspace.findUnique({ where: { slug: uniqueSlug } })) {
@@ -85,27 +83,14 @@ export async function GET(request: Request) {
       }
 
       const workspaceName = `${formattedName}'s Workspace`;
-      
-      // Create Workspace
       const workspace = await db.workspace.create({
-        data: {
-          name: workspaceName,
-          slug: uniqueSlug,
-        },
+        data: { name: workspaceName, slug: uniqueSlug },
       });
 
-      targetWorkspaceSlug = uniqueSlug;
-
-      // Create OWNER membership for the user
       await db.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: user.id,
-          role: "OWNER",
-        },
+        data: { workspaceId: workspace.id, userId: user.id, role: "OWNER" },
       });
 
-      // Seed default Project
       const project = await db.project.create({
         data: {
           workspaceId: workspace.id,
@@ -115,7 +100,6 @@ export async function GET(request: Request) {
         },
       });
 
-      // Add user to project
       await db.projectMember.create({
         data: {
           projectId: project.id,
@@ -124,16 +108,10 @@ export async function GET(request: Request) {
         },
       });
 
-      // Add default Task List
       const list = await db.taskList.create({
-        data: {
-          projectId: project.id,
-          name: "General Tasks",
-          position: 1000,
-        },
+        data: { projectId: project.id, name: "General Tasks", position: 1000 },
       });
 
-      // Add default Task
       await db.task.create({
         data: {
           workspaceId: workspace.id,
@@ -145,15 +123,10 @@ export async function GET(request: Request) {
         },
       });
 
-      // Create default AI Settings
       await db.aiSettings.create({
-        data: {
-          workspaceId: workspace.id,
-          provider: "openai",
-        },
+        data: { workspaceId: workspace.id, provider: "openai" },
       });
 
-      // Log the action
       await db.auditLog.create({
         data: {
           workspaceId: workspace.id,
@@ -164,13 +137,23 @@ export async function GET(request: Request) {
           description: `Created workspace ${workspaceName} via passwordless signup`,
         },
       });
+
+      await setSession(user.id, workspace.id);
+      await setOnboardedCookie(user.id);
+      return NextResponse.redirect(`${origin}/dashboard`);
     }
 
-    // 3. Establish Streamlyned active cookies session
-    await setSession(email, targetWorkspaceSlug);
+    if (isOnboarded || ownerMembership) {
+      // Returning user or workspace owner → auto-login to their owned workspace (or first)
+      const target = ownerMembership || memberships[0];
+      await setSession(user.id, target.workspaceId);
+      await setOnboardedCookie(user.id);
+      return NextResponse.redirect(`${origin}/dashboard`);
+    }
 
-    // 4. Redirect to dashboard
-    return NextResponse.redirect(`${origin}/dashboard`);
+    // Invited user who hasn't onboarded yet → ask them to join or create
+    await setPendingOnboardingEmail(email);
+    return NextResponse.redirect(`${origin}/onboarding`);
   } catch (err: any) {
     console.error("Auth Callback GET Error:", err);
     const host = request.headers.get("host") || "localhost:3000";

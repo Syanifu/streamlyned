@@ -68,7 +68,7 @@ export default function LandingForm() {
   return (
     <div className="w-full max-w-md bg-surface border border-border-custom rounded-xl p-8 shadow-sm space-y-6">
       <div>
-        <h2 className="text-xl font-medium text-brand-accent tracking-tight">
+        <h2 className="text-xl font-medium text-neutral-900 dark:text-white tracking-tight">
           Join Streamlyned
         </h2>
         <p className="text-xs text-neutral-400 mt-1">
@@ -78,7 +78,7 @@ export default function LandingForm() {
 
       <form onSubmit={handleEmailSignIn} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">
+          <label htmlFor="email" className="block text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-1.5">
             Email Address
           </label>
           <div className="relative">
@@ -99,14 +99,14 @@ export default function LandingForm() {
         </div>
 
         {error && (
-          <div className="text-xs bg-red-50 dark:bg-red-950/20 text-brand-danger p-3 rounded-lg border border-red-100 dark:border-red-950/30 flex items-start gap-2">
+          <div className="text-xs bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-3 rounded-lg border border-red-100 dark:border-red-950/30 flex items-start gap-2">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="text-xs bg-emerald-50 dark:bg-emerald-950/25 text-emerald-800 dark:text-emerald-300 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-2">
+          <div className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-start gap-2">
             <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
             <span>{successMsg}</span>
           </div>
@@ -115,7 +115,7 @@ export default function LandingForm() {
         <button
           type="submit"
           disabled={isPending || !email.trim()}
-          className="w-full flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-950 rounded-lg text-sm font-semibold py-2.5 transition-colors disabled:opacity-50 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 rounded-lg text-sm font-semibold py-2.5 transition-colors disabled:opacity-50 cursor-pointer"
         >
           {isPending ? (
             <>
@@ -152,7 +152,7 @@ export default function LandingForm() {
       </form>
 
       <div className="mt-6 flex items-start gap-2 text-neutral-400 text-xs">
-        <Sparkles size={14} className="text-brand-success mt-0.5 shrink-0" />
+        <Sparkles size={14} className="text-neutral-400 mt-0.5 shrink-0" />
         <span>
           A frictionless signup. If you do not have a workspace yet, one will be created and pre-seeded for you automatically upon first entry.
         </span>

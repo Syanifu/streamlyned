@@ -28,18 +28,23 @@ model User {
   dmMemberships      DmGroupMember[]
   notifications      Notification[]
   projectMemberships ProjectMember[]
+  projectFiles       ProjectFile[]
+  knowledgeUploads   WorkspaceKnowledge[]
   taskAssignees      TaskAssignee[]
   memberships        WorkspaceMember[]
   aiConfigs          AiConfig[]
+  googleCalendarToken GoogleCalendarToken?
+  sessions           Session[]
+  connections        Connection[]
 }
 
 model Workspace {
-  id               String            @id @default(uuid())
+  id               String               @id @default(uuid())
   name             String
-  slug             String            @unique
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  apiKey           String?           @unique
+  slug             String               @unique
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  apiKey           String?              @unique
   aiSettings       AiSettings?
   auditLogs        AuditLog[]
   events           CalendarEvent[]
@@ -53,7 +58,11 @@ model Workspace {
   notifications    Notification[]
   projects         Project[]
   members          WorkspaceMember[]
+  knowledgeFiles   WorkspaceKnowledge[]
   aiConfig         AiConfig?
+  notionConnection NotionConnection?
+  sessions         Session[]
+  connections      Connection[]
 }
 
 model WorkspaceMember {
@@ -89,6 +98,7 @@ model Project {
   checkInQuestions CheckInQuestion[]
   discussions      Discussion[]
   docs             Doc[]
+  files            ProjectFile[]
   hillChartItems   HillChartItem[]
   workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members          ProjectMember[]
@@ -158,6 +168,20 @@ model TaskAttachment {
   fileSize  Int
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ProjectFile {
+  id           String   @id @default(uuid())
+  workspaceId  String
+  projectId    String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  uploadedById String
+  createdAt    DateTime @default(now())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
 }
 
 model Comment {
@@ -421,4 +445,115 @@ model AiConfig {
   user         User      @relation(fields: [updatedBy], references: [id], onDelete: Cascade)
 
   @@map("ai_config")
+}
+
+model GoogleCalendarToken {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  accessToken   String
+  refreshToken  String?
+  expiresAt     DateTime?
+  syncedAt      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceKnowledge {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  name         String
+  description  String?
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  textContent  String?
+  uploadedById String
+  createdAt    DateTime  @default(now())
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id])
+}
+
+model NotionConnection {
+  id            String    @id @default(uuid())
+  workspaceId   String    @unique
+  accessToken   String
+  botId         String
+  notionWorkspaceName String?
+  notionWorkspaceIcon String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// --- Phase 0: Secure session model ---
+model Session {
+  id            String    @id @default(uuid())
+  userId        String
+  workspaceId   String
+  tokenHash     String    @unique
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  lastUsedAt    DateTime  @default(now())
+  ipHash        String?
+  userAgentHash String?
+  revokedAt     DateTime?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// --- Phase 1: Unified integration connection model ---
+model Connection {
+  id                  String         @id @default(uuid())
+  provider            String
+  ownerType           String         // USER | WORKSPACE
+  userId              String?
+  workspaceId         String?
+  externalAccountId   String?
+  externalAccountName String?
+  accessToken         String         // encrypted (AES-256-GCM)
+  refreshToken        String?        // encrypted
+  tokenType           String?
+  tokenSecret         String?        // encrypted, oauth1
+  scopes              String         @default("[]") // JSON array
+  expiresAt           DateTime?
+  status              String         @default("active") // active|expired|revoked|error
+  lastSyncedAt        DateTime?
+  lastError           String?
+  metadata            String?        // JSON
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  user                User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace           Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  externalItems       ExternalItem[]
+}
+
+// --- Phase 1: Dedup tracking for imported external content ---
+model ExternalItem {
+  id              String     @id @default(uuid())
+  connectionId    String
+  provider        String
+  externalId      String
+  externalType    String     // page|database|record|file|doc|note
+  localEntityType String     // DOC|PROJECT|TASK|FILE|EMBEDDING
+  localEntityId   String
+  contentHash     String?
+  syncDirection   String     @default("inbound")
+  lastSyncedAt    DateTime   @default(now())
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, externalId])
+}
+
+// --- Cross-cutting: Append-only audit trail ---
+model AuditEvent {
+  id           String   @id @default(uuid())
+  actorUserId  String?
+  workspaceId  String?
+  action       String
+  resourceType String?
+  resourceId   String?
+  ipHash       String?
+  metadata     String?  // JSON
+  createdAt    DateTime @default(now())
 }

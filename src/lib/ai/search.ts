@@ -35,7 +35,7 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
  */
 export async function indexEntity(
   workspaceId: string,
-  entityType: "TASK" | "DISCUSSION" | "DOC" | "COMMENT" | "CHAT",
+  entityType: "TASK" | "DISCUSSION" | "DOC" | "COMMENT" | "CHAT" | "FILE",
   entityId: string,
   projectId: string | null,
   text: string
@@ -98,7 +98,6 @@ export async function executeHybridSearch(
 
   // 3. Permission Filter at Query Time
   for (const emb of embeddings) {
-    let hasAccess = false;
     let title = "";
     let targetUrl = "";
     let projectName = "Global";
@@ -174,15 +173,21 @@ export async function executeHybridSearch(
         title = `Doc: ${doc.title}`;
         targetUrl = `/dashboard/projects/${doc.projectId}?tab=docs&id=${doc.id}`;
       } else if (emb.entityType === "CHAT") {
-        const chat = await db.chatMessage.findUnique({ 
+        const chat = await db.chatMessage.findUnique({
           where: { id: emb.entityId },
           include: { user: true }
         });
         if (!chat) continue;
         title = `Chat Message by ${chat.user.name}`;
-        targetUrl = chat.projectId 
+        targetUrl = chat.projectId
           ? `/dashboard/projects/${chat.projectId}?tab=chat`
           : `/dashboard/dm?id=${chat.dmGroupId}`;
+      } else if (emb.entityType === "FILE") {
+        const kf = await db.workspaceKnowledge.findUnique({ where: { id: emb.entityId } });
+        if (!kf) continue;
+        title = `Knowledge: ${kf.name}`;
+        targetUrl = `/dashboard/everything?tab=files`;
+        projectName = "Workspace Knowledge";
       } else {
         continue;
       }

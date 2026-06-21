@@ -1,4 +1,3 @@
-import React from "react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -32,14 +31,26 @@ export default async function ProjectsIndexPage() {
           members: true,
         },
       },
+      chatMessages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
+      },
     },
   });
+
+  const projectChatInfo = projects.map((p) => ({
+    projectId: p.id,
+    latestMessageAt: p.chatMessages[0]?.createdAt.toISOString() ?? null,
+  }));
 
   return (
     <ProjectListView
       projects={projects}
       workspaceName={session.workspace.name}
       isClient={isClient}
+      currentUserId={session.user.id}
+      projectChatInfo={projectChatInfo}
     />
   );
 }

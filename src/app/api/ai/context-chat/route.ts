@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { executeHybridSearch } from "@/lib/ai/search";
 
 export async function POST(request: Request) {
@@ -25,12 +24,7 @@ export async function POST(request: Request) {
       query
     );
 
-    // Check if provider API key is set for this workspace
-    const settings = await db.aiSettings.findUnique({
-      where: { workspaceId: session.workspace.id },
-    });
-
-    const hasKey = !!(settings?.apiKey);
+    const hasKey = !!process.env.OPENAI_API_KEY;
 
     return NextResponse.json({
       answer: searchResult.answer,

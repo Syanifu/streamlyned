@@ -14,13 +14,12 @@ import {
   toggleProjectAgenticAction,
 } from "@/app/actions/project";
 
-const ALL_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar"] as const;
+const ALL_TOOLS = ["tasks", "chat", "docs", "calendar"] as const;
 type Tool = (typeof ALL_TOOLS)[number];
 
 const TOOL_LABELS: Record<Tool, string> = {
   tasks: "Tasks",
-  discussions: "Discussions",
-  chat: "Chat",
+  chat: "Chatroom",
   docs: "Docs",
   calendar: "Calendar",
 };
@@ -220,51 +219,51 @@ export default function ProjectSettingsTab({
         </h2>
         <div className="bg-surface border border-border-custom rounded-lg p-5 space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-neutral-500">Project Name</label>
+            <label className="text-xs font-medium text-neutral-600">Project Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={!canManage}
-              className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+              className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-50"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-neutral-500">Description</label>
+            <label className="text-xs font-medium text-neutral-600">Description</label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={!canManage}
-              className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 resize-none"
+              className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-50 resize-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-neutral-500">Start Date</label>
+              <label className="text-xs font-medium text-neutral-600">Start Date</label>
               <input
                 type="date"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
                 disabled={!canManage}
-                className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-50"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-neutral-500">End Date</label>
+              <label className="text-xs font-medium text-neutral-600">End Date</label>
               <input
                 type="date"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
                 disabled={!canManage}
-                className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-50"
               />
             </div>
           </div>
           {/* Agentic Features toggle */}
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
-              <Zap size={13} className="text-indigo-500" />
+              <Zap size={13} className="text-neutral-600" />
               <span className="text-sm text-foreground">Agentic Features</span>
               <span className="text-xs text-neutral-400">— AI-powered meeting notes parsing</span>
             </div>
@@ -272,7 +271,7 @@ export default function ProjectSettingsTab({
               onClick={handleToggleAgentic}
               disabled={!canManage || isTogglingAgentic}
               className={`w-9 h-5 rounded-full transition-colors relative flex items-center shrink-0 disabled:opacity-50 ${
-                agenticOn ? "bg-indigo-600" : "bg-neutral-300 dark:bg-neutral-700"
+                agenticOn ? "bg-neutral-900 dark:bg-neutral-200" : "bg-neutral-300 dark:bg-neutral-700"
               }`}
             >
               <span
@@ -292,7 +291,7 @@ export default function ProjectSettingsTab({
             <button
               onClick={handleSaveGeneral}
               disabled={isPending}
-              className="flex items-center gap-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 text-xs font-medium bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
             >
               <Save size={13} />
               Save Changes
@@ -320,7 +319,7 @@ export default function ProjectSettingsTab({
                       if (e.target.checked) next.add(tool); else next.delete(tool);
                       setSelectedTools(next);
                     }}
-                    className="accent-indigo-600"
+                    className="accent-neutral-800 dark:accent-neutral-200"
                   />
                   <span className="text-sm text-foreground">{TOOL_LABELS[tool]}</span>
                 </label>
@@ -334,7 +333,7 @@ export default function ProjectSettingsTab({
             <button
               onClick={handleSaveTools}
               disabled={isPending}
-              className="flex items-center gap-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 text-xs font-medium bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
             >
               <Save size={13} />
               Save Tabs
@@ -361,7 +360,7 @@ export default function ProjectSettingsTab({
               <select
                 value={addUserId}
                 onChange={(e) => setAddUserId(e.target.value)}
-                className="flex-1 text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="flex-1 text-sm bg-background border border-border-custom rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-neutral-500"
               >
                 <option value="">Select a workspace member to add…</option>
                 {notYetMembers.map((u) => (
@@ -371,7 +370,7 @@ export default function ProjectSettingsTab({
               <button
                 onClick={handleAddMember}
                 disabled={!addUserId || isPending}
-                className="flex items-center gap-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md transition-colors disabled:opacity-50 shrink-0"
+                className="flex items-center gap-1.5 text-xs font-medium bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 text-white px-3 py-2 rounded-md transition-colors disabled:opacity-50 shrink-0"
               >
                 <UserPlus size={13} />
                 Add
@@ -393,8 +392,8 @@ export default function ProjectSettingsTab({
                       {member.user.avatarUrl ? (
                         <img src={member.user.avatarUrl} alt="" className="w-7 h-7 rounded-full shrink-0" />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-300">
+                        <div className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                             {member.user.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -430,9 +429,9 @@ export default function ProjectSettingsTab({
                               checked={memberTools.includes(tool)}
                               onChange={(e) => handleVisibleToolsChange(member.id, tool, e.target.checked)}
                               disabled={loadingMemberId === member.id}
-                              className="accent-indigo-600"
+                              className="accent-neutral-800 dark:accent-neutral-200"
                             />
-                            <span className="text-xs text-neutral-500">{TOOL_LABELS[tool]}</span>
+                            <span className="text-xs text-neutral-600">{TOOL_LABELS[tool]}</span>
                           </label>
                         ))}
                       </div>

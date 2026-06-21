@@ -124,12 +124,14 @@ export async function addDiscussionCommentAction(
 }
 
 /**
- * Sends a chat message in a project chat room or a DM group
+ * Sends a chat message in a project chat room or a DM group.
+ * Optionally attaches pre-uploaded files (uploaded via /api/upload/chat-file).
  */
 export async function sendChatMessageAction(
   projectId: string | null,
   dmGroupId: string | null,
-  content: string
+  content: string,
+  attachments?: { fileName: string; fileUrl: string; fileSize: number }[]
 ) {
   try {
     const session = await requireSession();
@@ -144,7 +146,7 @@ export async function sendChatMessageAction(
         where: { projectId_userId: { projectId, userId: session.user.id } },
       });
       if (!projectMember) throw new Error("Access Denied.");
-      
+
       // Clients can only post if they have visibility flag for chat (which is checked in UI, but check here too)
       if (session.role === "CLIENT") {
         const visibleTools = JSON.parse(projectMember.visibleTools) as string[];
@@ -171,6 +173,18 @@ export async function sendChatMessageAction(
         content: content.trim(),
       },
     });
+
+    // Attach uploaded files
+    if (attachments?.length) {
+      await db.chatMessageFile.createMany({
+        data: attachments.map((a) => ({
+          messageId: message.id,
+          fileName: a.fileName,
+          fileUrl: a.fileUrl,
+          fileSize: a.fileSize,
+        })),
+      });
+    }
 
     // Index chat message in vector search (projectId is null for DMs)
     await indexEntity(session.workspace.id, "CHAT", message.id, projectId, message.content);
@@ -330,6 +344,29 @@ export async function createDmGroupAction(recipientEmails: string[]) {
 
     revalidatePath("/dashboard/dm");
     return { success: true, dmGroupId: dmGroup.id };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteChatMessageAction(messageId: string) {
+  try {
+    const session = await requireSession();
+
+    const message = await db.chatMessage.findUnique({
+      where: { id: messageId },
+      select: { userId: true, projectId: true, dmGroupId: true },
+    });
+
+    if (!message) throw new Error("Message not found.");
+    if (message.userId !== session.user.id) throw new Error("You can only unsend your own messages.");
+
+    await db.chatMessage.delete({ where: { id: messageId } });
+
+    if (message.projectId) revalidatePath(`/dashboard/projects/${message.projectId}`);
+    if (message.dmGroupId) revalidatePath("/dashboard/dm");
+
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

@@ -16,7 +16,7 @@ export default function SuperAdminAiConsole() {
           onClick={() => setActiveTab("console")}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all select-none ${
             activeTab === "console"
-              ? "border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400"
+              ? "border-neutral-800 text-neutral-800 dark:border-neutral-200 dark:text-neutral-200"
               : "border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
           }`}
         >
@@ -28,7 +28,7 @@ export default function SuperAdminAiConsole() {
           onClick={() => setActiveTab("config")}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all select-none ${
             activeTab === "config"
-              ? "border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400"
+              ? "border-neutral-800 text-neutral-800 dark:border-neutral-200 dark:text-neutral-200"
               : "border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
           }`}
         >

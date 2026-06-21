@@ -84,7 +84,7 @@ export const PRIORITY_MAP: Record<string, { label: string; color: string; bg: st
   P3: { label: "P3 — Medium", color: "yellow", bg: "bg-yellow-50 dark:bg-yellow-950/20", border: "border-yellow-500", text: "text-yellow-850 dark:text-yellow-350", dot: "bg-yellow-500", icon: "🟡" },
   P4: { label: "P4 — Normal", color: "green", bg: "bg-green-50 dark:bg-green-950/20", border: "border-green-500", text: "text-green-800 dark:text-green-300", dot: "bg-green-500", icon: "🟢" },
   P5: { label: "P5 — Low", color: "blue", bg: "bg-blue-50 dark:bg-blue-950/20", border: "border-blue-500", text: "text-blue-800 dark:text-blue-300", dot: "bg-blue-500", icon: "🔵" },
-  P6: { label: "P6 — Archived", color: "grey", bg: "bg-neutral-50 dark:bg-neutral-900/30", border: "border-neutral-400 dark:border-neutral-600", text: "text-neutral-500 dark:text-neutral-400", dot: "bg-neutral-400 dark:bg-neutral-600", icon: "⚪" },
+  P6: { label: "P6 — Archived", color: "grey", bg: "bg-neutral-50 dark:bg-neutral-900/30", border: "border-neutral-400 dark:border-neutral-600", text: "text-neutral-600 dark:text-neutral-400", dot: "bg-neutral-400 dark:bg-neutral-600", icon: "⚪" },
 };
 
 interface ListCompact {
@@ -163,7 +163,7 @@ function SortableTaskCard({
       onClick={() => openDrawer(task)}
       className={`relative overflow-hidden pt-4 p-3 bg-surface border border-border-custom hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg shadow-sm flex flex-col gap-2 transition-all select-none ${
         isClient ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
-      } ${!task.visibleToClients ? "border-dashed border-amber-300 dark:border-amber-900" : ""}`}
+      } ${!task.visibleToClients ? "border-dashed border-neutral-300 dark:border-neutral-700" : ""}`}
     >
       {/* Top bar accent */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${PRIORITY_MAP[task.priority]?.dot || 'bg-neutral-200'}`} />
@@ -179,7 +179,7 @@ function SortableTaskCard({
           className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 shrink-0 mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {task.isCompleted ? (
-            <CheckSquare size={15} className="text-brand-success" />
+            <CheckSquare size={15} className="text-neutral-600 dark:text-neutral-400" />
           ) : (
             <Square size={15} />
           )}
@@ -205,8 +205,8 @@ function SortableTaskCard({
               <span
                 className={`text-[9px] flex items-center gap-1 font-medium px-1.5 py-0.2 rounded ${
                   isOverdue
-                    ? "bg-red-50 dark:bg-red-950/20 text-brand-danger border border-red-100 dark:border-red-900/50"
-                    : "bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                    ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border border-neutral-800 dark:border-white"
+                    : "bg-neutral-50 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
                 }`}
               >
                 <Calendar size={10} />
@@ -226,7 +226,7 @@ function SortableTaskCard({
             )}
             {!isClient && !task.visibleToClients && (
               <span
-                className="text-[9px] flex items-center gap-1 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50 px-1.5 py-0.2 rounded font-medium"
+                className="text-[9px] flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.2 rounded font-medium"
                 title="Private to team (Hidden from clients)"
               >
                 <EyeOff size={10} />
@@ -477,10 +477,10 @@ export default function TasksTab({
             <KanbanColumn key={list.id} list={list}>
               {/* List Header */}
               <div className="flex items-center justify-between mb-3 shrink-0">
-                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">
                   {list.name}
                 </h3>
-                <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.2 rounded-full font-mono">
+                <span className="text-[10px] bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-0.2 rounded-full font-mono">
                   {list.tasks.length}
                 </span>
               </div>
@@ -551,7 +551,7 @@ export default function TasksTab({
                       <button
                         type="button"
                         onClick={() => setActiveAddListId(null)}
-                        className="px-2.5 py-1 border border-border-custom text-neutral-500 rounded text-[10px] hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                        className="px-2.5 py-1 border border-border-custom text-neutral-600 rounded text-[10px] hover:bg-neutral-50 dark:hover:bg-neutral-800"
                       >
                         Cancel
                       </button>
@@ -598,7 +598,7 @@ export default function TasksTab({
 
             {/* Client mode visibility switch */}
             {!isClient && (
-              <div className="p-3 bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-950/40 rounded-lg flex items-center justify-between text-xs">
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-900/30 border border-border-custom rounded-lg flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <span className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                     {selectedTaskDetails.visibleToClients ? <Eye size={13} /> : <EyeOff size={13} />}
@@ -619,7 +619,7 @@ export default function TasksTab({
                     router.refresh();
                   }}
                   className={`w-9 h-5 rounded-full transition-colors relative flex items-center shrink-0 ${
-                    selectedTaskDetails.visibleToClients ? "bg-brand-success" : "bg-neutral-300 dark:bg-neutral-700"
+                    selectedTaskDetails.visibleToClients ? "bg-neutral-800 dark:bg-neutral-200" : "bg-neutral-300 dark:bg-neutral-700"
                   }`}
                 >
                   <span
@@ -701,7 +701,7 @@ export default function TasksTab({
             >
               {selectedTaskDetails.isCompleted ? (
                 <>
-                  <CheckSquare size={14} className="text-brand-success" />
+                  <CheckSquare size={14} className="text-neutral-600 dark:text-neutral-400" />
                   <span>Mark Incomplete</span>
                 </>
               ) : (
@@ -818,7 +818,7 @@ export default function TasksTab({
                       key={c.id}
                       className={`p-3 rounded-lg border text-xs ${
                         c.isClientComment
-                          ? "bg-amber-50/30 border-l-4 border-l-amber-500 border-amber-100"
+                          ? "bg-neutral-50 dark:bg-neutral-900/30 border-l-4 border-l-neutral-400 border-neutral-200 dark:border-neutral-700"
                           : "bg-neutral-50/50 dark:bg-neutral-900/30 border-border-custom"
                       }`}
                     >
@@ -826,7 +826,7 @@ export default function TasksTab({
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-neutral-800 dark:text-neutral-200">{c.user.name}</span>
                           {c.isClientComment && (
-                            <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[8px] font-bold px-1 rounded">
+                            <span className="bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 text-[8px] font-bold px-1 rounded">
                               Client
                             </span>
                           )}
@@ -860,7 +860,7 @@ export default function TasksTab({
                   taskHistory.map((h) => {
                     const icon = h.priority ? PRIORITY_MAP[h.priority]?.icon : "";
                     return (
-                      <div key={h.id} className="flex items-center gap-1.5 text-neutral-500">
+                      <div key={h.id} className="flex items-center gap-1.5 text-neutral-600">
                         {icon && <span title={h.priority} className="text-[10px] shrink-0">{icon}</span>}
                         <span className="font-medium text-neutral-700 dark:text-neutral-300 shrink-0">
                           {h.user.name.split(" ")[0]}:

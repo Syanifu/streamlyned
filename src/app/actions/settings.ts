@@ -5,60 +5,6 @@ import { requireSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 /**
- * Saves AI Gateway settings for the workspace
- */
-export async function saveAiSettingsAction(
-  provider: string,
-  apiKey: string,
-  completionModel: string,
-  embeddingsModel: string
-) {
-  try {
-    const session = await requireSession();
-
-    // Verify role
-    if (session.role !== "OWNER" && session.role !== "ADMIN") {
-      throw new Error("Access Denied: Only workspace owners and admins can edit settings.");
-    }
-
-    // Upsert AI Settings
-    await db.aiSettings.upsert({
-      where: { workspaceId: session.workspace.id },
-      update: {
-        provider,
-        apiKey: apiKey.trim() || null,
-        completionModel,
-        embeddingsModel,
-      },
-      create: {
-        workspaceId: session.workspace.id,
-        provider,
-        apiKey: apiKey.trim() || null,
-        completionModel,
-        embeddingsModel,
-      },
-    });
-
-    // Write to audit log
-    await db.auditLog.create({
-      data: {
-        workspaceId: session.workspace.id,
-        entityType: "SETTINGS",
-        entityId: session.workspace.id,
-        userId: session.user.id,
-        action: "UPDATE",
-        description: `updated AI Gateway provider configuration to "${provider}"`,
-      },
-    });
-
-    revalidatePath("/dashboard/settings");
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-/**
  * Invites a new user to the workspace
  */
 export async function inviteUserAction(email: string, name: string, role: string) {

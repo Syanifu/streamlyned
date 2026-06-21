@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Folder, Plus, X, Loader2, ArrowRight } from "lucide-react";
 import { createProjectAction } from "@/app/actions/project";
 import { useRouter } from "next/navigation";
+import { hasUnreadChatMessages } from "@/lib/chat-seen";
 
 interface ProjectItem {
   id: string;
@@ -16,19 +17,39 @@ interface ProjectItem {
   };
 }
 
+interface ProjectChatInfo {
+  projectId: string;
+  latestMessageAt: string | null;
+}
+
 interface ProjectListViewProps {
   projects: ProjectItem[];
   workspaceName: string;
   isClient: boolean;
+  currentUserId: string;
+  projectChatInfo: ProjectChatInfo[];
 }
 
 export default function ProjectListView({
   projects,
   workspaceName,
   isClient,
+  currentUserId,
+  projectChatInfo,
 }: ProjectListViewProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const ids = new Set<string>();
+    for (const info of projectChatInfo) {
+      if (hasUnreadChatMessages(currentUserId, info.projectId, info.latestMessageAt)) {
+        ids.add(info.projectId);
+      }
+    }
+    setUnreadIds(ids);
+  }, [currentUserId, projectChatInfo]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -115,22 +136,27 @@ export default function ProjectListView({
               className="bg-surface border border-border-custom hover:border-neutral-400 dark:hover:border-neutral-700 rounded-xl p-5 block transition-all hover:shadow-sm"
             >
               <div className="flex justify-between items-start gap-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 line-clamp-1">
-                    {project.name}
-                  </h3>
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 line-clamp-1">
+                      {project.name}
+                    </h3>
+                    {unreadIds.has(project.id) && (
+                      <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                    )}
+                  </div>
                   <p className="text-[11px] text-neutral-400 line-clamp-2 h-8 leading-relaxed">
                     {project.description || "No description provided."}
                   </p>
                 </div>
-                <span className="p-1.5 rounded bg-neutral-50 dark:bg-neutral-900 text-neutral-450 border border-border-custom">
+                <span className="p-1.5 rounded bg-neutral-800 dark:bg-neutral-700 text-white border-0 shrink-0">
                   <Folder size={15} />
                 </span>
               </div>
 
               <div className="mt-6 pt-4 border-t border-border-custom flex items-center justify-between text-[10px] text-neutral-400 font-medium">
                 <span>{project._count.members} Members</span>
-                <span className="flex items-center gap-0.5 text-brand-accent">
+                <span className="flex items-center gap-0.5 text-neutral-600 dark:text-neutral-400">
                   <span>Enter</span>
                   <ArrowRight size={10} />
                 </span>
@@ -218,7 +244,7 @@ export default function ProjectListView({
               </div>
 
               {error && (
-                <div className="text-[10px] text-brand-danger bg-red-50 border border-red-100 dark:bg-red-950/10 p-2.5 rounded-lg">
+                <div className="text-[10px] text-red-600 dark:text-red-400 bg-red-50 border border-red-100 dark:bg-red-950/10 p-2.5 rounded-lg">
                   {error}
                 </div>
               )}
@@ -227,7 +253,7 @@ export default function ProjectListView({
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-3.5 py-2 border border-border-custom text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 rounded-lg text-xs font-semibold transition-colors"
+                  className="px-3.5 py-2 border border-border-custom text-neutral-600 hover:text-neutral-800 dark:hover:text-neutral-200 rounded-lg text-xs font-semibold transition-colors"
                 >
                   Cancel
                 </button>

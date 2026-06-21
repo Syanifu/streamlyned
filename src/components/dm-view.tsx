@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { sendChatMessageAction, addChatReactionAction, createDmGroupAction } from "@/app/actions/communication";
-import { MessageSquare, Plus, Send, X, ShieldAlert, Check } from "lucide-react";
+import { sendChatMessageAction, addChatReactionAction, createDmGroupAction, deleteChatMessageAction } from "@/app/actions/communication";
+import { MessageSquare, Plus, Send, X, Check, Paperclip, FileText, Trash2 } from "lucide-react";
+import { markDmSeen, hasUnreadDmMessages } from "@/lib/chat-seen";
 
 interface UserCompact {
   id: string;
@@ -40,6 +41,47 @@ export default function DmView({
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(false);
+  const [unreadDmIds, setUnreadDmIds] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  type PendingFile = { fileName: string; fileUrl: string; fileSize: number; uploading?: boolean };
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+
+  const MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = "";
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`"${file.name}" exceeds the 100 MB limit.`);
+        continue;
+      }
+      const placeholder: PendingFile = { fileName: file.name, fileUrl: "", fileSize: file.size, uploading: true };
+      setPendingFiles((prev) => [...prev, placeholder]);
+
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/upload/chat-file", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        setPendingFiles((prev) =>
+          prev.map((f) => (f === placeholder ? { fileName: data.fileName, fileUrl: data.url, fileSize: data.fileSize } : f))
+        );
+      } catch (err: any) {
+        alert(`Failed to upload "${file.name}": ${err.message}`);
+        setPendingFiles((prev) => prev.filter((f) => f !== placeholder));
+      }
+    }
+  };
 
   // Modal State for starting DMs
   const [showNewDmModal, setShowNewDmModal] = useState(false);
@@ -48,10 +90,32 @@ export default function DmView({
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Update local messages when initialMessages prop updates
+  // Compute unread state from localStorage on mount and when dmGroups change
+  useEffect(() => {
+    const ids = new Set<string>();
+    for (const g of dmGroups) {
+      const latestAt = g.messages[0]?.createdAt
+        ? new Date(g.messages[0].createdAt).toISOString()
+        : null;
+      if (hasUnreadDmMessages(currentUser.id, g.id, latestAt)) {
+        ids.add(g.id);
+      }
+    }
+    setUnreadDmIds(ids);
+  }, [dmGroups, currentUser.id]);
+
+  // Update local messages when initialMessages prop updates and mark seen
   useEffect(() => {
     setMessages(initialMessages);
-  }, [initialMessages]);
+    if (selectedGroup) {
+      markDmSeen(currentUser.id, selectedGroup.id);
+      setUnreadDmIds((prev) => {
+        const next = new Set(prev);
+        next.delete(selectedGroup.id);
+        return next;
+      });
+    }
+  }, [initialMessages, selectedGroup, currentUser.id]);
 
   // Dynamic DM polling (every 3 seconds)
   useEffect(() => {
@@ -63,6 +127,7 @@ export default function DmView({
         const data = await res.json();
         if (data.messages) {
           setMessages(data.messages);
+          markDmSeen(currentUser.id, selectedGroup.id);
         }
       } catch (e) {
         console.error(e);
@@ -71,7 +136,7 @@ export default function DmView({
 
     const interval = setInterval(pollMessages, 3000);
     return () => clearInterval(interval);
-  }, [selectedGroup]);
+  }, [selectedGroup, currentUser.id]);
 
   // Scroll to bottom on message updates
   useEffect(() => {
@@ -80,19 +145,25 @@ export default function DmView({
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !selectedGroup) return;
+    const readyFiles = pendingFiles.filter((f) => !f.uploading && f.fileUrl);
+    if (!selectedGroup || (!inputText.trim() && readyFiles.length === 0)) return;
     setIsSending(true);
 
-    const res = await sendChatMessageAction(null, selectedGroup.id, inputText);
+    const res = await sendChatMessageAction(
+      null,
+      selectedGroup.id,
+      inputText || " ",
+      readyFiles.length ? readyFiles : undefined
+    );
     if (res.success) {
       setInputText("");
-      // Add local message instantly before poll catches up
+      setPendingFiles([]);
       if (res.message) {
         const mockMsg = {
           ...res.message,
           user: currentUser,
           reactions: [],
-          files: [],
+          files: readyFiles.map((f, i) => ({ id: `tmp-${i}`, ...f })),
         };
         setMessages((prev) => [...prev, mockMsg]);
       }
@@ -110,6 +181,19 @@ export default function DmView({
       const fetchRes = await fetch(`/api/dm/${selectedGroup.id}`);
       const data = await fetchRes.json();
       if (data.messages) setMessages(data.messages);
+    }
+  };
+
+  const handleUnsend = async (messageId: string) => {
+    setMessages((prev) => prev.filter((m: any) => m.id !== messageId));
+    const res = await deleteChatMessageAction(messageId);
+    if (!res.success) {
+      // Restore on failure
+      if (selectedGroup) {
+        const fetchRes = await fetch(`/api/dm/${selectedGroup.id}`);
+        const data = await fetchRes.json();
+        if (data.messages) setMessages(data.messages);
+      }
     }
   };
 
@@ -153,12 +237,12 @@ export default function DmView({
       <div className="w-72 border-r border-border-custom flex flex-col justify-between shrink-0">
         <div className="flex-1 flex flex-col min-h-0">
           <div className="p-4 border-b border-border-custom flex items-center justify-between shrink-0">
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">
               Conversations
             </span>
             <button
               onClick={() => setShowNewDmModal(true)}
-              className="p-1 hover:bg-neutral-50 text-neutral-500 hover:text-neutral-800 rounded border border-border-custom"
+              className="p-1 hover:bg-neutral-50 text-neutral-600 hover:text-neutral-800 rounded border border-border-custom"
               title="Start new conversation"
             >
               <Plus size={14} />
@@ -176,6 +260,8 @@ export default function DmView({
                 const lastMsg = g.messages[0];
                 const isSelected = selectedGroup?.id === g.id;
 
+                const hasUnread = unreadDmIds.has(g.id) && !isSelected;
+
                 return (
                   <button
                     key={g.id}
@@ -183,15 +269,20 @@ export default function DmView({
                     className={`w-full text-left p-3 rounded-lg flex flex-col gap-1 text-xs border ${
                       isSelected
                         ? "bg-neutral-50 border-neutral-200 text-neutral-900"
-                        : "bg-transparent border-transparent text-neutral-500 hover:bg-neutral-50/50"
+                        : "bg-transparent border-transparent text-neutral-600 hover:bg-neutral-50/50"
                     }`}
                   >
-                    <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
-                      {displayNames || "Only You"}
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                        {displayNames || "Only You"}
+                      </span>
+                      {hasUnread && (
+                        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                      )}
                     </span>
                     {lastMsg ? (
                       <p className="text-[10px] text-neutral-400 truncate">
-                        <span className="font-medium text-neutral-500">{lastMsg.user.name.split(" ")[0]}:</span> {lastMsg.content}
+                        <span className="font-medium text-neutral-600">{lastMsg.user.name.split(" ")[0]}:</span> {lastMsg.content}
                       </p>
                     ) : (
                       <p className="text-[10px] text-neutral-400 italic">No messages yet</p>
@@ -249,14 +340,25 @@ export default function DmView({
                           </span>
                         </div>
 
-                        <div
-                          className={`p-3 rounded-lg text-xs leading-relaxed text-white ${
-                            isClientUser
-                              ? "bg-emerald-600 dark:bg-emerald-600 border-transparent"
-                              : "bg-blue-600 dark:bg-blue-600 border-transparent"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap">{m.content}</p>
+                        <div className={`p-3 rounded-lg text-xs leading-relaxed text-white ${isClientUser ? "bg-green-600 dark:bg-green-700" : "bg-blue-600 dark:bg-blue-700"}`}>
+                          {m.content?.trim() && <p className="whitespace-pre-wrap">{m.content}</p>}
+                          {m.files?.length > 0 && (
+                            <div className={`flex flex-col gap-1.5 ${m.content?.trim() ? "mt-2" : ""}`}>
+                              {m.files.map((f: any) => (
+                                <a
+                                  key={f.id}
+                                  href={f.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 rounded-md transition-colors"
+                                >
+                                  <FileText size={12} className="shrink-0" />
+                                  <span className="truncate text-[10px] font-medium">{f.fileName}</span>
+                                  <span className="text-[9px] opacity-70 shrink-0 ml-auto">{formatFileSize(f.fileSize)}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Reactions */}
@@ -269,8 +371,8 @@ export default function DmView({
                                 onClick={() => handleToggleReaction(m.id, emoji)}
                                 className={`text-[9px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 font-mono transition-colors ${
                                   hasReacted
-                                    ? "bg-indigo-50 border-indigo-200 text-indigo-800"
-                                    : "bg-neutral-50 border-border-custom text-neutral-500 hover:bg-neutral-100"
+                                    ? "bg-neutral-800 border-neutral-800 text-white dark:bg-neutral-200 dark:border-neutral-200 dark:text-neutral-900"
+                                    : "bg-neutral-50 border-border-custom text-neutral-700 hover:bg-neutral-100"
                                 }`}
                               >
                                 <span>{emoji}</span>
@@ -291,6 +393,17 @@ export default function DmView({
                               </button>
                             ))}
                           </div>
+
+                          {/* Unsend (own messages only, shows on hover) */}
+                          {isMe && (
+                            <button
+                              onClick={() => handleUnsend(m.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                              title="Unsend message"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -303,23 +416,67 @@ export default function DmView({
             {/* Input Form */}
             <form
               onSubmit={handleSendMessage}
-              className="p-4 border-t border-border-custom bg-surface flex items-center gap-3 shrink-0"
+              className="p-4 border-t border-border-custom bg-surface flex flex-col gap-2 shrink-0"
             >
-              <input
-                type="text"
-                required
-                placeholder="Type your private message..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                className="flex-1 text-xs px-3.5 py-2.5 border border-border-custom rounded-lg focus:outline-none focus:border-brand-accent bg-transparent placeholder-neutral-400"
-              />
-              <button
-                type="submit"
-                disabled={isSending || !inputText.trim()}
-                className="p-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg disabled:opacity-50 transition-colors shrink-0"
-              >
-                <Send size={13} />
-              </button>
+              {/* Pending file chips */}
+              {pendingFiles.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {pendingFiles.map((f, i) => (
+                    <span
+                      key={i}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-neutral-800 border border-border-custom rounded-md text-[10px] text-neutral-600 dark:text-neutral-300"
+                    >
+                      <FileText size={10} className="shrink-0 text-neutral-400" />
+                      <span className="max-w-[120px] truncate">{f.fileName}</span>
+                      {f.uploading ? (
+                        <span className="text-neutral-400 animate-pulse">uploading…</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-neutral-400 hover:text-neutral-700 transition-colors"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <div className="flex-1 flex items-center border border-border-custom rounded-lg overflow-hidden focus-within:border-brand-accent">
+                  <input
+                    type="text"
+                    placeholder="Type your private message..."
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    className="flex-1 text-xs px-3.5 py-2.5 focus:outline-none bg-transparent placeholder-neutral-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded mr-2 transition-colors"
+                    title="Attach files (max 100 MB each)"
+                  >
+                    <Paperclip size={14} />
+                  </button>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSending || (!inputText.trim() && pendingFiles.filter((f) => !f.uploading && f.fileUrl).length === 0)}
+                  className="p-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg disabled:opacity-50 transition-colors shrink-0"
+                >
+                  <Send size={13} />
+                </button>
+              </div>
             </form>
           </div>
         ) : (
@@ -376,7 +533,7 @@ export default function DmView({
                       <div
                         className={`w-4 h-4 rounded border flex items-center justify-center ${
                           isChecked
-                            ? "bg-indigo-600 border-indigo-600 text-white"
+                            ? "bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-neutral-900"
                             : "border-border-custom"
                         }`}
                       >
@@ -391,7 +548,7 @@ export default function DmView({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowNewDmModal(false)}
-                className="px-3 py-1.5 border border-border-custom text-neutral-500 rounded-lg text-xs hover:bg-neutral-50"
+                className="px-3 py-1.5 border border-border-custom text-neutral-600 rounded-lg text-xs hover:bg-neutral-50"
               >
                 Cancel
               </button>

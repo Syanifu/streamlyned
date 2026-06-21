@@ -194,9 +194,9 @@ function NotificationRow({
 
   if (isAgentConfirm && !notification.isRead) {
     return (
-      <div className="p-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/10 flex items-center justify-between gap-4 border-l-4 border-indigo-500 animate-in fade-in duration-200">
+      <div className="p-4 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/10 flex items-center justify-between gap-4 border-l-4 border-neutral-800 dark:border-neutral-300 animate-in fade-in duration-200">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <CalendarIcon size={16} className="text-indigo-500 shrink-0" />
+          <CalendarIcon size={16} className="text-neutral-600 shrink-0" />
           <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
             <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
               Next sync: "{notification.title}"
@@ -207,14 +207,14 @@ function NotificationRow({
           <button
             onClick={onConfirmAgent}
             disabled={isSubmitting}
-            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
+            className="px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
           >
             Add to calendar
           </button>
           <button
             onClick={onDismissAgent}
             disabled={isSubmitting}
-            className="px-2.5 py-1.5 border border-border-custom hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
+            className="px-2.5 py-1.5 border border-border-custom hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
           >
             Dismiss
           </button>
@@ -233,7 +233,7 @@ function NotificationRow({
             {notification.isSuppressed ? (
               <BellOff size={16} className="text-neutral-400" aria-label="Push Suppressed" />
             ) : (
-              <Bell size={16} className="text-indigo-400" />
+              <Bell size={16} className="text-neutral-400" />
             )}
             {notification.priority === "P1" && (
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-surface animate-pulse" />
@@ -251,12 +251,12 @@ function NotificationRow({
                 {notification.title}
               </span>
               {notification.isSuppressed && (
-                <span className="bg-neutral-100 text-neutral-500 text-[8px] font-bold px-1.5 py-0.2 rounded font-mono">
+                <span className="bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900 text-[8px] font-bold px-1.5 py-0.2 rounded font-mono">
                   Push Suppressed
                 </span>
               )}
             </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
               {isAgentConfirm ? "Scheduled to calendar successfully." : notification.message}
             </p>
             <span className="text-[10px] text-neutral-400 font-mono mt-1 block">
@@ -270,7 +270,7 @@ function NotificationRow({
           {!notification.isRead && (
             <button
               onClick={onMarkRead}
-              className="p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-brand-success"
+              className="p-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
               title="Mark as read"
             >
               <Check size={14} />
@@ -299,8 +299,8 @@ function NotificationRow({
 
       {/* Suppression explanation panel */}
       {isExplaining && (
-        <div className="mt-2 text-xs bg-indigo-50/50 border border-indigo-100 dark:bg-indigo-950/15 dark:border-indigo-950/20 text-indigo-900 dark:text-indigo-300 p-3 rounded-lg leading-relaxed animate-in fade-in duration-200">
-          <p className="font-semibold text-[10px] uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">
+        <div className="mt-2 text-xs bg-neutral-50 border border-border-custom dark:bg-neutral-900/30 text-neutral-700 dark:text-neutral-300 p-3 rounded-lg leading-relaxed animate-in fade-in duration-200">
+          <p className="font-semibold text-[10px] uppercase tracking-wider text-neutral-600 mb-1">
             Smart Reminder Suppress Explanation
           </p>
           {loadingExplanation ? (

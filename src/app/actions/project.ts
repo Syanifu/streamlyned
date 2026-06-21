@@ -32,7 +32,7 @@ export async function createProjectAction(data: {
         description: data.description.trim() || null,
         startDate: parsedStart,
         endDate: parsedEnd,
-        tools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+        tools: JSON.stringify(["tasks", "chat", "docs", "calendar"]),
 
       },
     });
@@ -42,7 +42,7 @@ export async function createProjectAction(data: {
       data: {
         projectId: project.id,
         userId: session.user.id,
-        visibleTools: JSON.stringify(["tasks", "discussions", "chat", "docs", "calendar"]),
+        visibleTools: JSON.stringify(["tasks", "chat", "docs", "calendar"]),
       },
     });
 
@@ -144,7 +144,7 @@ export async function updateProjectToolsAction(projectId: string, tools: string[
       throw new Error("Access Denied: Only admins or owners can change project tools.");
     }
 
-    const VALID_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar"];
+    const VALID_TOOLS = ["tasks", "chat", "docs", "calendar"];
     const filtered = tools.filter((t) => VALID_TOOLS.includes(t));
 
     await db.project.update({
@@ -320,6 +320,50 @@ export async function removeProjectMemberAction(projectId: string, memberId: str
   }
 }
 
+export async function getProjectFilesAction(projectId: string) {
+  try {
+    const session = await requireSession();
+
+    const member = await db.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: session.user.id } },
+    });
+    if (!member) throw new Error("Access Denied.");
+
+    const files = await db.projectFile.findMany({
+      where: { projectId },
+      include: { uploadedBy: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return { success: true, files };
+  } catch (error: any) {
+    return { success: false, error: error.message, files: [] };
+  }
+}
+
+export async function deleteProjectFileAction(projectId: string, fileId: string) {
+  try {
+    const session = await requireSession();
+
+    const member = await db.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: session.user.id } },
+    });
+    if (!member) throw new Error("Access Denied.");
+
+    const file = await db.projectFile.findFirst({
+      where: { id: fileId, projectId, workspaceId: session.workspace.id },
+    });
+    if (!file) throw new Error("File not found.");
+
+    await db.projectFile.delete({ where: { id: fileId } });
+
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateMemberVisibleToolsAction(projectId: string, memberId: string, tools: string[]) {
   try {
     const session = await requireSession();
@@ -336,7 +380,7 @@ export async function updateMemberVisibleToolsAction(projectId: string, memberId
       throw new Error("Member not found.");
     }
 
-    const VALID_TOOLS = ["tasks", "discussions", "chat", "docs", "calendar"];
+    const VALID_TOOLS = ["tasks", "chat", "docs", "calendar"];
     const filtered = tools.filter((t) => VALID_TOOLS.includes(t));
 
     await db.projectMember.update({

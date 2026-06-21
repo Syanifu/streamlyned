@@ -126,7 +126,7 @@ export default function ReportsDashboardView({
             className={`text-xs font-bold uppercase tracking-wider pb-1.5 border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "lineup"
                 ? "border-foreground text-foreground"
-                : "border-transparent text-neutral-500 hover:text-foreground"
+                : "border-transparent text-neutral-600 hover:text-foreground"
             }`}
           >
             <Calendar size={13} />
@@ -137,7 +137,7 @@ export default function ReportsDashboardView({
             className={`text-xs font-bold uppercase tracking-wider pb-1.5 border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "assignments"
                 ? "border-foreground text-foreground"
-                : "border-transparent text-neutral-500 hover:text-foreground"
+                : "border-transparent text-neutral-600 hover:text-foreground"
             }`}
           >
             <User size={13} />
@@ -148,7 +148,7 @@ export default function ReportsDashboardView({
             className={`text-xs font-bold uppercase tracking-wider pb-1.5 border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "mission"
                 ? "border-foreground text-foreground"
-                : "border-transparent text-neutral-500 hover:text-foreground"
+                : "border-transparent text-neutral-600 hover:text-foreground"
             }`}
           >
             <Activity size={13} />
@@ -159,7 +159,7 @@ export default function ReportsDashboardView({
             className={`text-xs font-bold uppercase tracking-wider pb-1.5 border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "overdue"
                 ? "border-foreground text-foreground text-red-650 dark:text-red-450 border-red-500"
-                : "border-transparent text-neutral-500 hover:text-foreground"
+                : "border-transparent text-neutral-600 hover:text-foreground"
             }`}
           >
             <Clock size={13} />
@@ -224,7 +224,7 @@ export default function ReportsDashboardView({
 
                             {/* Mini Gantt bar simulation */}
                             <div className="w-24 h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full relative overflow-hidden hidden sm:block">
-                              <div className="absolute left-1/4 right-1/4 h-full bg-indigo-500 rounded-full" />
+                              <div className="absolute left-1/4 right-1/4 h-full bg-neutral-500 rounded-full" />
                             </div>
                           </div>
                         ) : (
@@ -253,7 +253,7 @@ export default function ReportsDashboardView({
             <div className="bg-surface border border-border-custom p-4 rounded-xl flex items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center gap-2">
                 <Filter size={14} className="text-neutral-400" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
                   Select Team Member
                 </span>
               </div>
@@ -274,7 +274,7 @@ export default function ReportsDashboardView({
               {/* In Progress Column */}
               <div className="bg-surface border border-border-custom rounded-xl p-5 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 border-b border-border-custom pb-2">
-                  <Clock size={13} className="text-amber-500" />
+                  <Clock size={13} className="text-neutral-600" />
                   <span>In Progress ({userPendingTasks.length})</span>
                 </h3>
 
@@ -317,7 +317,7 @@ export default function ReportsDashboardView({
               {/* Completed Column */}
               <div className="bg-surface border border-border-custom rounded-xl p-5 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 border-b border-border-custom pb-2">
-                  <CheckCircle size={13} className="text-emerald-500" />
+                  <CheckCircle size={13} className="text-neutral-600" />
                   <span>Completed ({userCompletedTasks.length})</span>
                 </h3>
 
@@ -382,9 +382,9 @@ export default function ReportsDashboardView({
                   {/* Health label */}
                   <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${
                     health === "HEALTHY"
-                      ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-750 border-emerald-100 dark:border-emerald-900/30"
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700"
                       : health === "RISKY"
-                      ? "bg-amber-50 dark:bg-amber-950/20 text-amber-750 border-amber-100 dark:border-amber-900/30"
+                      ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-600"
                       : "bg-red-50 dark:bg-red-950/20 text-red-750 border-red-100 dark:border-red-900/30"
                   }`}>
                     {health}
@@ -400,7 +400,7 @@ export default function ReportsDashboardView({
                   <div className="w-full h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all duration-300 ${
-                        health === "HEALTHY" ? "bg-emerald-500" : health === "RISKY" ? "bg-amber-500" : "bg-red-500"
+                        health === "HEALTHY" ? "bg-neutral-700 dark:bg-neutral-400" : health === "RISKY" ? "bg-neutral-500" : "bg-neutral-900 dark:bg-white"
                       }`}
                       style={{ width: `${completionRate}%` }}
                     />
@@ -492,7 +492,7 @@ export default function ReportsDashboardView({
                 })
               ) : (
                 <div className="text-center py-12">
-                  <CheckCircle size={24} className="text-emerald-500 mx-auto mb-2" />
+                  <CheckCircle size={24} className="text-neutral-600 mx-auto mb-2" />
                   <p className="text-xs text-neutral-400 italic">No overdue tasks. All workspace schedules are on track!</p>
                 </div>
               )}

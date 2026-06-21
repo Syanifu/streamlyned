@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { sendChatMessageAction, addChatReactionAction } from "@/app/actions/communication";
+import { sendChatMessageAction, addChatReactionAction, deleteChatMessageAction } from "@/app/actions/communication";
 import { createCalendarEventAction } from "@/app/actions/calendar";
 import { 
   createTaskFromNudgeAction, 
@@ -10,7 +10,8 @@ import {
   setDueDateOnNearestTaskAction,
   inferPriorityAction
 } from "@/app/actions/nudges";
-import { Send, Smile, Paperclip, MessageSquare, Calendar, CheckCircle2, UserPlus, Clock } from "lucide-react";
+import { Send, Paperclip, MessageSquare, Calendar, CheckCircle2, UserPlus, Clock, FileText, X, Trash2 } from "lucide-react";
+import { markChatSeen } from "@/lib/chat-seen";
 import { toast } from "react-hot-toast";
 import { PRIORITY_MAP } from "./tasks-tab";
 
@@ -45,6 +46,46 @@ export default function ChatTab({
   const [isSending, setIsSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  type PendingFile = { fileName: string; fileUrl: string; fileSize: number; uploading?: boolean };
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+
+  const MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = "";
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`"${file.name}" exceeds the 100 MB limit.`);
+        continue;
+      }
+      const placeholder: PendingFile = { fileName: file.name, fileUrl: "", fileSize: file.size, uploading: true };
+      setPendingFiles((prev) => [...prev, placeholder]);
+
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/upload/chat-file", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        setPendingFiles((prev) =>
+          prev.map((f) => (f === placeholder ? { fileName: data.fileName, fileUrl: data.url, fileSize: data.fileSize } : f))
+        );
+      } catch (err: any) {
+        alert(`Failed to upload "${file.name}": ${err.message}`);
+        setPendingFiles((prev) => prev.filter((f) => f !== placeholder));
+      }
+    }
+  };
 
   const [nudges, setNudges] = useState<any[]>([]);
   const [inferredPriority, setInferredPriority] = useState("P4");
@@ -121,12 +162,12 @@ export default function ChatTab({
 
   const getEventStyles = (priority: string) => {
     const map: Record<string, { bg: string; text: string; border: string }> = {
-      P1: { bg: "bg-red-50 dark:bg-red-950/20", text: "text-red-850 dark:text-red-300", border: "border-red-150/45 dark:border-red-950/40" },
-      P2: { bg: "bg-orange-50 dark:bg-orange-950/20", text: "text-orange-850 dark:text-orange-300", border: "border-orange-150/45 dark:border-orange-950/40" },
-      P3: { bg: "bg-yellow-50 dark:bg-yellow-950/20", text: "text-yellow-800 dark:text-yellow-350", border: "border-yellow-150/45 dark:border-yellow-950/40" },
-      P4: { bg: "bg-green-50 dark:bg-green-950/20", text: "text-green-800 dark:text-green-300", border: "border-green-150/45 dark:border-green-950/40" },
-      P5: { bg: "bg-blue-50 dark:bg-blue-950/20", text: "text-blue-800 dark:text-blue-300", border: "border-blue-150/45 dark:border-blue-950/40" },
-      P6: { bg: "bg-neutral-50 dark:bg-neutral-900/30", text: "text-neutral-500 dark:text-neutral-400", border: "border-neutral-200 dark:border-neutral-800/50" },
+      P1: { bg: "bg-red-50 dark:bg-red-950/20", text: "text-[#111111]", border: "border-red-150/45 dark:border-red-950/40" },
+      P2: { bg: "bg-orange-50 dark:bg-orange-950/20", text: "text-[#111111]", border: "border-orange-150/45 dark:border-orange-950/40" },
+      P3: { bg: "bg-yellow-50 dark:bg-yellow-950/20", text: "text-[#111111]", border: "border-yellow-150/45 dark:border-yellow-950/40" },
+      P4: { bg: "bg-green-50 dark:bg-green-950/20", text: "text-[#111111]", border: "border-green-150/45 dark:border-green-950/40" },
+      P5: { bg: "bg-blue-50 dark:bg-blue-950/20", text: "text-[#111111]", border: "border-blue-150/45 dark:border-blue-950/40" },
+      P6: { bg: "bg-neutral-50 dark:bg-neutral-900/30", text: "text-[#111111]", border: "border-neutral-200 dark:border-neutral-800/50" },
     };
     return map[priority] || map.P4;
   };
@@ -194,6 +235,7 @@ export default function ChatTab({
       const res = await fetch(`/api/project/${projectId}/chat`);
       const data = await res.json();
       setMessages(data.messages || []);
+      markChatSeen(currentUser.id, projectId);
     } catch (e) {
       console.error(e);
     } finally {
@@ -217,12 +259,19 @@ export default function ChatTab({
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    const readyFiles = pendingFiles.filter((f) => !f.uploading && f.fileUrl);
+    if (!inputText.trim() && readyFiles.length === 0) return;
     setIsSending(true);
 
-    const res = await sendChatMessageAction(projectId, null, inputText);
+    const res = await sendChatMessageAction(
+      projectId,
+      null,
+      inputText || " ",
+      readyFiles.length ? readyFiles : undefined
+    );
     if (res.success) {
       setInputText("");
+      setPendingFiles([]);
       loadMessages(true);
     } else {
       alert(res.error || "Failed to send message");
@@ -234,6 +283,15 @@ export default function ChatTab({
     const res = await addChatReactionAction(messageId, emoji, projectId);
     if (res.success) {
       loadMessages(true);
+    }
+  };
+
+  const handleUnsend = async (messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    const res = await deleteChatMessageAction(messageId);
+    if (!res.success) {
+      loadMessages(true); // Restore on failure
+      toast.error(res.error || "Failed to unsend message");
     }
   };
 
@@ -249,7 +307,7 @@ export default function ChatTab({
   const reactionEmojis = ["👍", "❤️", "🔥", "🙌", "👀"];
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-surface border border-border-custom rounded-xl overflow-hidden max-w-4xl mx-auto h-[600px]">
+    <div className="flex-1 flex flex-col min-h-0 bg-surface border border-border-custom rounded-xl overflow-hidden w-full">
       {/* Chat Messages Log */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 ? (
@@ -275,7 +333,7 @@ export default function ChatTab({
             return (
               <div
                 key={m.id}
-                className={`flex gap-3 max-w-xl ${isMe ? "ml-auto flex-row-reverse" : ""}`}
+                className={`flex gap-3 max-w-2xl ${isMe ? "ml-auto flex-row-reverse" : ""}`}
               >
                 {/* User Avatar */}
                 <img
@@ -299,11 +357,28 @@ export default function ChatTab({
                   <div
                     className={`p-3 rounded-lg text-xs leading-relaxed text-white ${
                       isClientUser
-                        ? "bg-emerald-600 dark:bg-emerald-600 border-transparent"
-                        : "bg-blue-600 dark:bg-blue-600 border-transparent"
+                        ? "bg-green-600 dark:bg-green-700"
+                        : "bg-blue-600 dark:bg-blue-700"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                    {m.content.trim() && <p className="whitespace-pre-wrap">{m.content}</p>}
+                    {m.files?.length > 0 && (
+                      <div className={`flex flex-col gap-1.5 ${m.content.trim() ? "mt-2" : ""}`}>
+                        {m.files.map((f) => (
+                          <a
+                            key={f.id}
+                            href={f.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 rounded-md transition-colors"
+                          >
+                            <FileText size={12} className="shrink-0" />
+                            <span className="truncate text-[10px] font-medium">{f.fileName}</span>
+                            <span className="text-[9px] opacity-70 shrink-0 ml-auto">{formatFileSize(f.fileSize)}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Message Reactions Row */}
@@ -317,8 +392,8 @@ export default function ChatTab({
                           onClick={() => handleToggleReaction(m.id, emoji)}
                           className={`text-[9px] px-1.5 py-0.5 rounded-full border flex items-center gap-1 font-mono transition-colors ${
                             hasReacted
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-800"
-                              : "bg-neutral-50 border-border-custom text-neutral-500 hover:bg-neutral-100"
+                              ? "bg-neutral-800 border-neutral-800 text-white dark:bg-neutral-200 dark:border-neutral-200 dark:text-neutral-900"
+                              : "bg-neutral-50 border-border-custom text-neutral-700 hover:bg-neutral-100"
                           }`}
                         >
                           <span>{emoji}</span>
@@ -339,6 +414,17 @@ export default function ChatTab({
                         </button>
                       ))}
                     </div>
+
+                    {/* Unsend (own messages only, shows on hover) */}
+                    {isMe && (
+                      <button
+                        onClick={() => handleUnsend(m.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-neutral-400 hover:text-red-500 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
+                        title="Unsend message"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -368,7 +454,7 @@ export default function ChatTab({
                   alert(res.error || "Failed to send reply");
                 }
               }}
-              className="px-2.5 py-1 bg-surface border border-border-custom hover:border-indigo-400 dark:hover:border-indigo-900 rounded-lg text-[10px] font-medium text-neutral-600 dark:text-neutral-350 hover:text-indigo-650 transition-colors shadow-2xs"
+              className="px-2.5 py-1 bg-surface border border-border-custom hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text[10px] font-medium text-neutral-600 dark:text-neutral-350 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors shadow-2xs"
             >
               {replyText}
             </button>
@@ -391,9 +477,9 @@ export default function ChatTab({
               if (nudge.type === "duedate") Icon = Clock;
 
               const isPriorityNudge = nudge.type === "task" || nudge.type === "assign";
-              const styles = isPriorityNudge 
+              const styles = isPriorityNudge
                 ? getEventStyles(nudge.priority || "P4")
-                : { bg: "bg-indigo-50 dark:bg-indigo-950/20", text: "text-indigo-700 dark:text-indigo-400", border: "border-indigo-150/45" };
+                : { bg: "bg-neutral-100 dark:bg-neutral-800", text: "text-neutral-700 dark:text-neutral-300", border: "border-neutral-300 dark:border-neutral-600" };
 
               return (
                 <button
@@ -410,21 +496,54 @@ export default function ChatTab({
           </div>
         )}
 
+        {/* Pending file chips */}
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {pendingFiles.map((f, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 dark:bg-neutral-800 border border-border-custom rounded-md text-[10px] text-neutral-600 dark:text-neutral-300"
+              >
+                <FileText size={10} className="shrink-0 text-neutral-400" />
+                <span className="max-w-[120px] truncate">{f.fileName}</span>
+                {f.uploading ? (
+                  <span className="text-neutral-400 animate-pulse">uploading…</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="text-neutral-400 hover:text-neutral-700 transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
           <div className="flex-1 relative flex items-center border border-border-custom rounded-lg overflow-hidden focus-within:border-brand-accent">
             <input
               type="text"
-              required
               placeholder="Type your message..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="flex-1 text-xs px-3.5 py-2.5 focus:outline-none bg-transparent placeholder-neutral-400 text-neutral-800 dark:text-neutral-200"
             />
-            
+
             <button
               type="button"
-              className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded mr-2"
-              title="Attach files (5GB limit)"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 text-neutral-400 hover:text-neutral-600 rounded mr-2 transition-colors"
+              title="Attach files (max 100 MB each)"
             >
               <Paperclip size={14} />
             </button>
@@ -432,7 +551,7 @@ export default function ChatTab({
 
           <button
             type="submit"
-            disabled={isSending || !inputText.trim()}
+            disabled={isSending || (!inputText.trim() && pendingFiles.filter((f) => !f.uploading && f.fileUrl).length === 0)}
             className="p-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg disabled:opacity-50 transition-colors shrink-0"
           >
             <Send size={13} />

@@ -72,8 +72,8 @@ export default function AiConfigPanel() {
 
   if (isLoading) {
     return (
-      <div className="bg-surface border border-border-custom rounded-xl p-6 flex flex-col items-center justify-center min-h-[200px] text-neutral-400">
-        <Loader2 className="animate-spin text-indigo-500 mb-2" size={24} />
+      <div className="bg-surface border border-border-custom rounded-xl p-6 flex flex-col items-center justify-center min-h-[200px] text-neutral-600 dark:text-neutral-400">
+        <Loader2 className="animate-spin text-neutral-600 dark:text-neutral-400 mb-2" size={24} />
         <span className="text-xs">Loading operational parameters...</span>
       </div>
     );
@@ -82,12 +82,12 @@ export default function AiConfigPanel() {
   return (
     <div className="bg-surface border border-border-custom rounded-xl p-6 shadow-sm space-y-4">
       <div className="flex items-center gap-2 text-neutral-800 dark:text-neutral-200">
-        <Sparkles size={16} className="text-indigo-550 dark:text-indigo-400" />
-        <h2 className="text-sm font-semibold">AI System Configuration</h2>
+        <Sparkles size={16} className="text-neutral-600" />
+        <h2 className="text-sm font-semibold">Ashy Configuration</h2>
       </div>
 
       <p className="text-xs text-neutral-400 leading-normal">
-        Configure the core agent persona and instructions. This prompt defines how the AI agent acts, communicates, and prioritizes workspace tasks.
+        Configure Ashy's persona and instructions. This prompt defines how Ashy acts, communicates, and prioritizes workspace tasks.
       </p>
 
       <form onSubmit={handleSave} className="space-y-4 pt-2">
@@ -96,7 +96,7 @@ export default function AiConfigPanel() {
             <label htmlFor="agent-personality" className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-1">
               Agent personality
             </label>
-            <span className={`text-[10px] font-mono ${prompt.length > 900 ? "text-brand-danger" : "text-neutral-450"}`}>
+            <span className={`text-[10px] font-mono ${prompt.length > 900 ? "text-red-500" : "text-neutral-450"}`}>
               {prompt.length}/1000
             </span>
           </div>
@@ -107,7 +107,7 @@ export default function AiConfigPanel() {
             placeholder={DEFAULT_PLACEHOLDER}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="w-full text-xs px-3.5 py-3 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-indigo-550 placeholder-neutral-400 text-neutral-800 dark:text-neutral-100 resize-y min-h-[100px] font-sans leading-relaxed"
+            className="w-full text-xs px-3.5 py-3 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-neutral-500 placeholder-neutral-400 text-neutral-800 dark:text-neutral-100 resize-y min-h-[100px] font-sans leading-relaxed"
           />
         </div>
 
@@ -134,7 +134,7 @@ export default function AiConfigPanel() {
             type="button"
             onClick={handleReset}
             disabled={isSaving || !prompt}
-            className="flex items-center gap-1.5 px-3 py-2 border border-border-custom text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 rounded-lg text-xs transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-2 border border-border-custom text-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 rounded-lg text-xs transition-colors disabled:opacity-40"
           >
             <RotateCcw size={13} />
             <span>Reset to default</span>

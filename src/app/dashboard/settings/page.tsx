@@ -1,4 +1,3 @@
-import React from "react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -11,16 +10,11 @@ export default async function SettingsPage() {
     redirect("/");
   }
 
-  // Authorisation boundary: Only OWNER or ADMIN can open settings
   if (session.role !== "OWNER" && session.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
-  // 1 & 2. Fetch AI Gateway configurations and members in parallel
-  const [aiSettings, members] = await Promise.all([
-    db.aiSettings.findUnique({
-      where: { workspaceId: session.workspace.id },
-    }),
+  const [members, notionConnection] = await Promise.all([
     db.workspaceMember.findMany({
       where: { workspaceId: session.workspace.id },
       include: {
@@ -34,24 +28,17 @@ export default async function SettingsPage() {
         },
       },
       orderBy: { role: "asc" },
-    })
+    }),
+    db.notionConnection.findUnique({ where: { workspaceId: session.workspace.id } }),
   ]);
 
   return (
     <SettingsView
-      initialSettings={
-        aiSettings
-          ? {
-              provider: aiSettings.provider,
-              apiKey: aiSettings.apiKey,
-              completionModel: aiSettings.completionModel,
-              embeddingsModel: aiSettings.embeddingsModel,
-            }
-          : null
-      }
       members={members}
       currentUserId={session.user.id}
       currentUserRole={session.role}
+      notionConnected={!!notionConnection}
+      notionWorkspaceName={notionConnection?.notionWorkspaceName ?? null}
     />
   );
 }

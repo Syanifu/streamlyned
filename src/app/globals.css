@@ -26,8 +26,26 @@
   --color-brand-success: var(--success);
   --color-brand-danger: var(--danger);
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-dm-sans, "DM Sans"), "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* ── Colour theme backgrounds ───────────────────────────────────────────── */
+/* Applied by setting data-bg="<hex>" on <html>. Each rule overrides        */
+/* --background, then the catch-all forces every bg-background element to   */
+/* use the new value (covers Tailwind utility classes that may compile the   */
+/* variable reference away at build time).                                   */
+
+html[data-bg="#BFD3E8"] { --background: #BFD3E8; }
+html[data-bg="#CBE2D4"] { --background: #CBE2D4; }
+html[data-bg="#F0D0D5"] { --background: #F0D0D5; }
+html[data-bg="#E7E7E9"] { --background: #E7E7E9; }
+html[data-bg="#F6DEB2"] { --background: #F6DEB2; }
+html[data-bg="#DAD0E8"] { --background: #DAD0E8; }
+
+html[data-bg] body,
+html[data-bg] .bg-background {
+  background-color: var(--background) !important;
 }
 
 /* Custom dark theme override when .dark is present */
@@ -46,6 +64,12 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   line-height: 1.55;
   font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iPhone safe-area bottom padding for bottom nav */
+.pb-safe {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
 /* High contrast overrides: white bg -> black text, black bg -> white text */

@@ -1,4 +1,3 @@
-import React from "react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -30,8 +29,8 @@ export default async function EverythingPage() {
 
   const projectIds = projects.map((p) => p.id);
 
-  // 2, 3 & 4. Fetch comments, docs, and task attachments in parallel
-  const [comments, docs, taskAttachments] = await Promise.all([
+  // 2–6. Fetch comments, docs, task attachments, project files, and workspace knowledge in parallel
+  const [comments, docs, taskAttachments, projectFiles, knowledgeFiles] = await Promise.all([
     db.comment.findMany({
       where: {
         workspaceId: session.workspace.id,
@@ -118,10 +117,22 @@ export default async function EverythingPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
+    db.projectFile.findMany({
+      where: { projectId: { in: projectIds } },
+      include: {
+        uploadedBy: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.workspaceKnowledge.findMany({
+      where: { workspaceId: session.workspace.id },
+      include: { uploadedBy: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   // Format dates for props safety
-  const formattedComments = comments.map((c) => ({
+  const formattedComments = comments.filter((c) => !c.discussionId || c.taskId || c.docId).map((c) => ({
     id: c.id,
     content: c.content,
     createdAt: c.createdAt.toISOString(),
@@ -151,9 +162,31 @@ export default async function EverythingPage() {
     projectId: a.task.projectId,
   }));
 
+  const formattedProjectFiles = projectFiles.map((f) => ({
+    id: f.id,
+    fileName: f.fileName,
+    fileUrl: f.fileUrl,
+    fileSize: f.fileSize,
+    mimeType: f.mimeType,
+    createdAt: f.createdAt.toISOString(),
+    projectId: f.projectId,
+    uploadedBy: f.uploadedBy,
+  }));
+
   const formattedProjects = projects.map((p) => ({
     id: p.id,
     name: p.name,
+  }));
+
+  const formattedKnowledgeFiles = knowledgeFiles.map((k) => ({
+    id: k.id,
+    name: k.name,
+    description: k.description,
+    fileUrl: k.fileUrl,
+    fileSize: k.fileSize,
+    mimeType: k.mimeType,
+    createdAt: k.createdAt.toISOString(),
+    uploadedBy: k.uploadedBy,
   }));
 
   return (
@@ -172,7 +205,8 @@ export default async function EverythingPage() {
         comments={formattedComments}
         docs={formattedDocs}
         attachments={formattedAttachments}
-        isClient={session.role === "CLIENT"}
+        projectFiles={formattedProjectFiles}
+        knowledgeFiles={formattedKnowledgeFiles}
       />
     </div>
   );

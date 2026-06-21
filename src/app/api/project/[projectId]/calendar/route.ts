@@ -34,14 +34,21 @@ export async function GET(
       }
     }
 
-    // Query events
+    // Query events with attendees
     const events = await db.calendarEvent.findMany({
       where: {
         projectId,
         workspaceId: session.workspace.id,
       },
-      orderBy: {
-        startAt: "asc",
+      orderBy: { startAt: "asc" },
+      include: {
+        attendees: {
+          include: {
+            user: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
+          },
+        },
       },
     });
 

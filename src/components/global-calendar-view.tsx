@@ -1,13 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Calendar as CalendarIcon, 
-  MapPin, 
-  Video, 
-  Clock,
+import { useRouter } from "next/navigation";
+import {
+  createStructuredCalendarEventAction,
+  updateCalendarEventAction,
+  deleteCalendarEventAction,
+  parseMeetingNotesAction,
+  type ParsedEventDraft,
+} from "@/app/actions/calendar";
+import {
+  Calendar as CalendarIcon,
   Filter,
-  Check
+  Check,
+  Copy,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  FileText,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface ProjectInfo {
@@ -39,54 +53,271 @@ interface TaskDueCompact {
   priority: string;
 }
 
+const PRIORITIES = [
+  { value: "P1", label: "🔴 P1 — Critical" },
+  { value: "P2", label: "🟠 P2 — High" },
+  { value: "P3", label: "🟡 P3 — Medium" },
+  { value: "P4", label: "🟢 P4 — Normal" },
+  { value: "P5", label: "🔵 P5 — Low" },
+  { value: "P6", label: "⚪ P6 — Archived" },
+];
+
 const getEventStyles = (priority: string) => {
   const map: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-    P1: { bg: "bg-red-50 dark:bg-red-950/20", text: "text-red-800 dark:text-red-300", border: "border-red-100 dark:border-red-950/40", dot: "bg-red-500" },
-    P2: { bg: "bg-orange-50 dark:bg-orange-950/20", text: "text-orange-850 dark:text-orange-300", border: "border-orange-100 dark:border-orange-950/40", dot: "bg-orange-500" },
-    P3: { bg: "bg-yellow-50 dark:bg-yellow-950/20", text: "text-yellow-800 dark:text-yellow-350", border: "border-yellow-100 dark:border-yellow-950/40", dot: "bg-yellow-500" },
-    P4: { bg: "bg-green-50 dark:bg-green-950/20", text: "text-green-800 dark:text-green-300", border: "border-green-100 dark:border-green-950/40", dot: "bg-green-500" },
-    P5: { bg: "bg-blue-50 dark:bg-blue-950/20", text: "text-blue-800 dark:text-blue-300", border: "border-blue-100 dark:border-blue-950/40", dot: "bg-blue-500" },
-    P6: { bg: "bg-neutral-50 dark:bg-neutral-900/30", text: "text-neutral-500 dark:text-neutral-400", border: "border-neutral-200 dark:border-neutral-800/50", dot: "bg-neutral-400 dark:bg-neutral-600" },
+    P1: { bg: "bg-red-500", text: "text-[#111111]", border: "border-red-600", dot: "bg-red-700" },
+    P2: { bg: "bg-orange-500", text: "text-[#111111]", border: "border-orange-600", dot: "bg-orange-700" },
+    P3: { bg: "bg-yellow-400", text: "text-[#111111]", border: "border-yellow-500", dot: "bg-yellow-600" },
+    P4: { bg: "bg-green-500", text: "text-[#111111]", border: "border-green-600", dot: "bg-green-700" },
+    P5: { bg: "bg-blue-500", text: "text-[#111111]", border: "border-blue-600", dot: "bg-blue-700" },
+    P6: { bg: "bg-neutral-400", text: "text-[#111111]", border: "border-neutral-500", dot: "bg-neutral-600" },
   };
   return map[priority] || map.P4;
+};
+
+const toDateStr = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const toTimeStr = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
 interface GlobalCalendarViewProps {
   projects: ProjectInfo[];
   events: CalendarEventCompact[];
   tasks: TaskDueCompact[];
+  currentUserId: string;
+  workspaceSlug: string;
 }
+
+type SidebarMode = "idle" | "create" | "edit" | "meeting-notes";
+
+interface EventForm {
+  projectId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  description: string;
+  location: string;
+  videoCallLink: string;
+  priority: string;
+}
+
+const emptyForm = (projectId: string, date = ""): EventForm => ({
+  projectId,
+  title: "",
+  date,
+  startTime: "09:00",
+  endTime: "10:00",
+  description: "",
+  location: "",
+  videoCallLink: "",
+  priority: "P4",
+});
 
 export default function GlobalCalendarView({
   projects,
   events,
   tasks,
+  currentUserId,
+  workspaceSlug,
 }: GlobalCalendarViewProps) {
+  const router = useRouter();
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEventCompact | null>(null);
+
+  // Sidebar state
+  const [mode, setMode] = useState<SidebarMode>("idle");
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [form, setForm] = useState<EventForm>(emptyForm(projects[0]?.id || ""));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Meeting notes parser state
+  const [meetingNotes, setMeetingNotes] = useState("");
+  const [meetingNotesProjectId, setMeetingNotesProjectId] = useState(projects[0]?.id || "");
+  const [isParsing, setIsParsing] = useState(false);
+  const [parsedDrafts, setParsedDrafts] = useState<ParsedEventDraft[]>([]);
+  const [draftErrors, setDraftErrors] = useState<string | null>(null);
+  const [isCreatingAll, setIsCreatingAll] = useState(false);
+  const [expandedDraft, setExpandedDraft] = useState<number | null>(null);
+
+  // iCal
+  const [isCopied, setIsCopied] = useState(false);
+
+  const getIcalUrl = () => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/api/ical/${workspaceSlug}/${currentUserId}`;
+  };
+
+  const handleCopyIcal = () => {
+    navigator.clipboard.writeText(getIcalUrl());
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const openMeetingNotes = () => {
+    setMeetingNotes("");
+    setMeetingNotesProjectId(projects[0]?.id || "");
+    setParsedDrafts([]);
+    setDraftErrors(null);
+    setExpandedDraft(null);
+    setMode("meeting-notes");
+  };
+
+  const handleParseNotes = async () => {
+    if (!meetingNotes.trim() || !meetingNotesProjectId) return;
+    setIsParsing(true);
+    setDraftErrors(null);
+    setParsedDrafts([]);
+    const res = await parseMeetingNotesAction(meetingNotesProjectId, meetingNotes);
+    setIsParsing(false);
+    if (res.success) {
+      setParsedDrafts(res.events);
+    } else {
+      setDraftErrors(res.error);
+    }
+  };
+
+  const handleCreateAllDrafts = async () => {
+    if (!parsedDrafts.length) return;
+    setIsCreatingAll(true);
+    let failed = 0;
+    for (const draft of parsedDrafts) {
+      const res = await createStructuredCalendarEventAction(meetingNotesProjectId, draft);
+      if (!res.success) failed++;
+    }
+    setIsCreatingAll(false);
+    if (failed === 0) {
+      setMode("idle");
+      setParsedDrafts([]);
+      setMeetingNotes("");
+      router.refresh();
+    } else {
+      setDraftErrors(`${failed} event(s) failed to create.`);
+    }
+  };
+
+  const updateDraft = (idx: number, key: keyof ParsedEventDraft, value: string) => {
+    setParsedDrafts((prev) => prev.map((d, i) => i === idx ? { ...d, [key]: value } : d));
+  };
+
+  const removeDraft = (idx: number) => {
+    setParsedDrafts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Open create form, optionally pre-filling a date
+  const openCreate = (date?: Date) => {
+    setForm(emptyForm(projects[0]?.id || "", date ? toDateStr(date) : ""));
+    setEditingEventId(null);
+    setMode("create");
+  };
+
+  // Open edit form from an existing event
+  const openEdit = (ev: CalendarEventCompact) => {
+    setForm({
+      projectId: ev.projectId,
+      title: ev.title,
+      date: toDateStr(new Date(ev.startAt)),
+      startTime: toTimeStr(ev.startAt),
+      endTime: toTimeStr(ev.endAt),
+      description: ev.description || "",
+      location: ev.location || "",
+      videoCallLink: ev.videoCallLink || "",
+      priority: ev.priority || "P4",
+    });
+    setEditingEventId(ev.id);
+    setMode("edit");
+  };
+
+  const setField = (key: keyof EventForm, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleSubmitCreate = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    if (!form.title.trim() || !form.date || !form.projectId) return;
+    setIsSubmitting(true);
+    const res = await createStructuredCalendarEventAction(form.projectId, {
+      title: form.title,
+      date: form.date,
+      startTime: form.startTime,
+      endTime: form.endTime,
+      description: form.description,
+      location: form.location,
+      videoCallLink: form.videoCallLink,
+      priority: form.priority,
+    });
+    setIsSubmitting(false);
+    if (res.success) {
+      setMode("idle");
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to create event");
+    }
+  };
+
+  const handleSubmitEdit = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    if (!editingEventId || !form.title.trim() || !form.date) return;
+    setIsSubmitting(true);
+    const res = await updateCalendarEventAction(editingEventId, {
+      title: form.title,
+      date: form.date,
+      startTime: form.startTime,
+      endTime: form.endTime,
+      description: form.description,
+      location: form.location,
+      videoCallLink: form.videoCallLink,
+      priority: form.priority,
+    });
+    setIsSubmitting(false);
+    if (res.success) {
+      setMode("idle");
+      setEditingEventId(null);
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to update event");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editingEventId || !confirm("Delete this event?")) return;
+    setIsDeleting(true);
+    const res = await deleteCalendarEventAction(editingEventId);
+    setIsDeleting(false);
+    if (res.success) {
+      setMode("idle");
+      setEditingEventId(null);
+      router.refresh();
+    } else {
+      alert(res.error || "Failed to delete event");
+    }
+  };
 
   // Filter items by project
-  const filteredEvents = selectedProjectId === "all" 
-    ? events 
-    : events.filter(e => e.projectId === selectedProjectId);
+  const filteredEvents = selectedProjectId === "all"
+    ? events
+    : events.filter((e) => e.projectId === selectedProjectId);
 
-  const filteredTasks = selectedProjectId === "all" 
-    ? tasks 
-    : tasks.filter(t => t.projectId === selectedProjectId);
+  const filteredTasks = selectedProjectId === "all"
+    ? tasks
+    : tasks.filter((t) => t.projectId === selectedProjectId);
 
-  // Generate Month Days Grid (35 days starting from Monday of this week)
+  // Generate 5-week grid starting from Monday of current week
   const getCalendarDays = () => {
-    const days = [];
+    const days: Date[] = [];
     const now = new Date();
-    
-    // Start of current week (Monday)
-    const currentDayOfWeek = now.getDay();
-    const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
-    const mondayOfWeek = new Date(now.setDate(now.getDate() + distanceToMonday));
-
+    const dow = now.getDay();
+    const distToMonday = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + distToMonday);
+    monday.setHours(0, 0, 0, 0);
     for (let i = 0; i < 35; i++) {
-      const day = new Date(mondayOfWeek.getTime() + i * 24 * 60 * 60 * 1000);
-      days.push(day);
+      days.push(new Date(monday.getTime() + i * 86400000));
     }
     return days;
   };
@@ -94,46 +325,173 @@ export default function GlobalCalendarView({
   const calendarDays = getCalendarDays();
   const weekdaysLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  // Helper to find project name
-  const getProjectName = (pId: string) => {
-    return projects.find(p => p.id === pId)?.name || "Unknown Project";
-  };
+  const getProjectName = (pId: string) =>
+    projects.find((p) => p.id === pId)?.name || "Unknown Project";
+
+  // Shared form fields UI (used for both create and edit)
+  const renderFormFields = () => (
+    <div className="space-y-3">
+      {mode === "create" && (
+        <div className="space-y-1">
+          <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Project</label>
+          <select
+            value={form.projectId}
+            onChange={(e) => setField("projectId", e.target.value)}
+            required
+            className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+          >
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="space-y-1">
+        <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Title</label>
+        <input
+          required
+          type="text"
+          placeholder="Event title"
+          value={form.title}
+          onChange={(e) => setField("title", e.target.value)}
+          className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-transparent rounded focus:outline-none focus:border-brand-accent placeholder-neutral-400"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Date</label>
+        <input
+          required
+          type="date"
+          value={form.date}
+          onChange={(e) => setField("date", e.target.value)}
+          className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Start</label>
+          <input
+            type="time"
+            value={form.startTime}
+            onChange={(e) => setField("startTime", e.target.value)}
+            className="w-full text-xs px-2 py-1.5 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">End</label>
+          <input
+            type="time"
+            value={form.endTime}
+            onChange={(e) => setField("endTime", e.target.value)}
+            className="w-full text-xs px-2 py-1.5 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Priority</label>
+        <select
+          value={form.priority}
+          onChange={(e) => setField("priority", e.target.value)}
+          className="w-full text-xs px-2 py-1.5 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+        >
+          {PRIORITIES.map((p) => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Location (optional)</label>
+        <input
+          type="text"
+          placeholder="e.g. Office or Zoom"
+          value={form.location}
+          onChange={(e) => setField("location", e.target.value)}
+          className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-transparent rounded focus:outline-none focus:border-brand-accent"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Video Link (optional)</label>
+        <input
+          type="text"
+          placeholder="https://zoom.us/..."
+          value={form.videoCallLink}
+          onChange={(e) => setField("videoCallLink", e.target.value)}
+          className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-transparent rounded focus:outline-none focus:border-brand-accent"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Description (optional)</label>
+        <textarea
+          placeholder="Add a description..."
+          value={form.description}
+          onChange={(e) => setField("description", e.target.value)}
+          rows={2}
+          className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-transparent rounded focus:outline-none focus:border-brand-accent placeholder-neutral-400 resize-none"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex-1 flex flex-col space-y-6 max-w-5xl mx-auto min-h-0 pb-12">
       {/* Filters Bar */}
       <div className="flex items-center justify-between gap-4 shrink-0 bg-surface border border-border-custom px-4 py-3 rounded-xl shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <Filter size={14} className="text-neutral-400" />
-          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-            Filter by Project
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <Filter size={14} className="text-neutral-400" />
+            <span className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">Filter by Project</span>
+          </div>
+          <select
+            value={selectedProjectId}
+            onChange={(e) => { setSelectedProjectId(e.target.value); setMode("idle"); }}
+            className="text-xs bg-surface border border-border-custom rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand-accent text-neutral-700 dark:text-neutral-200"
+          >
+            <option value="all">All Projects ({projects.length})</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
-        <select
-          value={selectedProjectId}
-          onChange={(e) => {
-            setSelectedProjectId(e.target.value);
-            setSelectedEvent(null);
-          }}
-          className="text-xs bg-surface border border-border-custom rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand-accent text-neutral-700 dark:text-neutral-200"
-        >
-          <option value="all">All Projects ({projects.length})</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyIcal}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border-custom hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 rounded-lg text-[10px] font-semibold transition-colors"
+            title="Copy iCal URL"
+          >
+            {isCopied ? <Check size={11} className="text-neutral-600" /> : <Copy size={11} />}
+            <span>{isCopied ? "iCal URL Copied" : "iCal Feed"}</span>
+          </button>
+          <button
+            onClick={openMeetingNotes}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border-custom hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 rounded-lg text-[10px] font-semibold transition-colors"
+          >
+            <FileText size={11} />
+            <span>Meeting Notes</span>
+          </button>
+          <button
+            onClick={() => openCreate()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-medium"
+          >
+            <Plus size={13} />
+            <span>Add Event</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
-        {/* Calendar Grid (Col-Span 3) */}
+        {/* Calendar Grid */}
         <div className="lg:col-span-3 flex flex-col bg-surface border border-border-custom rounded-xl p-4 overflow-hidden h-[500px]">
-          {/* Weekday Titles */}
+          {/* Weekday Labels */}
           <div className="grid grid-cols-7 gap-1 border-b border-border-custom pb-2 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider shrink-0">
-            {weekdaysLabels.map((lbl) => (
-              <div key={lbl}>{lbl}</div>
-            ))}
+            {weekdaysLabels.map((lbl) => <div key={lbl}>{lbl}</div>)}
           </div>
 
           {/* Days Grid */}
@@ -141,45 +499,55 @@ export default function GlobalCalendarView({
             {calendarDays.map((day, idx) => {
               const dayStr = day.toDateString();
               const isToday = new Date().toDateString() === dayStr;
+              const isSelected =
+                mode !== "idle" &&
+                form.date === toDateStr(day);
 
-              // Filter events and tasks for this day
-              const dayEvents = filteredEvents.filter((e) => new Date(e.startAt).toDateString() === dayStr);
+              const dayEvents = filteredEvents.filter(
+                (e) => new Date(e.startAt).toDateString() === dayStr
+              );
               const progressEvents = dayEvents.filter((e) => e.source === "agent_progress");
               const regularEvents = dayEvents.filter((e) => e.source !== "agent_progress");
-              const dayTasks = filteredTasks.filter((t) => new Date(t.dueDateEnd).toDateString() === dayStr);
+              const dayTasks = filteredTasks.filter(
+                (t) => new Date(t.dueDateEnd).toDateString() === dayStr
+              );
 
               return (
                 <div
                   key={idx}
-                  className={`border border-neutral-100 dark:border-neutral-850 p-1.5 rounded-lg flex flex-col min-h-0 space-y-1 ${
-                    isToday ? "bg-indigo-50/20 border-indigo-200 dark:border-indigo-900" : ""
+                  onClick={() => openCreate(day)}
+                  className={`border p-1.5 rounded-lg flex flex-col min-h-0 space-y-1 cursor-pointer transition-colors hover:bg-neutral-50/50 dark:hover:bg-neutral-900/10 ${
+                    isSelected
+                      ? "border-neutral-400 dark:border-neutral-600 bg-neutral-50/50 dark:bg-neutral-900/20"
+                      : isToday
+                      ? "border-neutral-300 dark:border-neutral-700 bg-neutral-50/30"
+                      : "border-neutral-100 dark:border-neutral-850"
                   }`}
                 >
-                  {/* Day Date Label */}
+                  {/* Day number */}
                   <span
                     className={`text-[9px] font-bold self-end font-mono ${
-                      isToday ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-400"
+                      isToday ? "text-neutral-800 dark:text-neutral-200" : "text-neutral-400"
                     }`}
                   >
                     {day.getDate()}
                   </span>
 
-                  {/* Items list */}
+                  {/* Items */}
                   <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0 scrollbar-none">
-                    {/* Regular Events */}
                     {regularEvents.map((e) => {
                       const styles = getEventStyles(e.priority || "P4");
                       return (
                         <button
                           key={e.id}
-                          onClick={() => setSelectedEvent(e)}
-                          className={`w-full text-left truncate text-[8px] font-semibold ${styles.bg} ${styles.text} px-1 py-0.5 rounded border ${styles.border} block`}
-                          title={`[${getProjectName(e.projectId)}] ${e.title}`}
+                          onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
+                          className={`w-full text-left truncate text-[8px] font-semibold ${styles.bg} ${styles.text} px-1 py-0.5 rounded border ${styles.border} block hover:brightness-95 transition-all`}
+                          title={`[${getProjectName(e.projectId)}] ${e.title} — click to edit`}
                         >
                           <span className="opacity-60 block truncate text-[7px] uppercase tracking-wide">
                             {getProjectName(e.projectId)}
                           </span>
-                          <span className="truncate block flex items-center gap-1">
+                          <span className="truncate flex items-center gap-1">
                             <span className={`w-1 h-1 rounded-full ${styles.dot} shrink-0`} />
                             <span>{e.title}</span>
                           </span>
@@ -187,19 +555,18 @@ export default function GlobalCalendarView({
                       );
                     })}
 
-                    {/* Tasks */}
                     {dayTasks.map((t) => {
                       const styles = getEventStyles(t.priority || "P4");
                       return (
                         <span
                           key={t.id}
                           className={`w-full text-left truncate text-[8px] font-medium ${styles.bg} ${styles.text} px-1 py-0.5 rounded border ${styles.border} block`}
-                          title={`Task Due in [${getProjectName(t.projectId)}]: ${t.title}`}
+                          title={`Task Due: ${t.title}`}
                         >
                           <span className="opacity-60 block truncate text-[7px] uppercase tracking-wide">
                             {getProjectName(t.projectId)}
                           </span>
-                          <span className="truncate block flex items-center gap-1">
+                          <span className="truncate flex items-center gap-1">
                             <span className={`w-1 h-1 rounded-full ${styles.dot} shrink-0`} />
                             <span>{t.title}</span>
                           </span>
@@ -207,47 +574,38 @@ export default function GlobalCalendarView({
                       );
                     })}
 
-                    {/* Progress Events */}
                     {progressEvents.map((e) => {
                       const pct = e.progressPct ?? 0;
-                      let barColor = "bg-rose-500 dark:bg-rose-600";
-                      let bgBorderText = "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-350";
-                      
+                      let barColor = "bg-neutral-400 dark:bg-neutral-600";
+                      let bgBorderText = "bg-neutral-100 border-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200";
                       if (pct >= 80) {
-                        barColor = "bg-emerald-500 dark:bg-emerald-600";
-                        bgBorderText = "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/40 dark:text-emerald-350";
+                        barColor = "bg-neutral-700 dark:bg-neutral-400";
+                        bgBorderText = "bg-neutral-100 border-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200";
                       } else if (pct >= 40) {
-                        barColor = "bg-amber-500 dark:bg-amber-600";
-                        bgBorderText = "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-900/40 dark:text-amber-350";
+                        barColor = "bg-neutral-500 dark:bg-neutral-500";
+                        bgBorderText = "bg-neutral-100 border-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200";
                       }
-
                       const isComplete = pct === 100;
-                      
                       return (
                         <button
                           key={e.id}
-                          onClick={() => setSelectedEvent(e)}
+                          onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
                           className={`w-full text-left p-1 rounded border ${bgBorderText} flex flex-col gap-0.5 mt-0.5 hover:opacity-90 transition-opacity`}
                           title={`[Progress] ${e.title}: ${isComplete ? "Complete" : `${pct}%`}`}
                         >
                           <div className="flex items-center justify-between gap-1 w-full min-w-0">
-                            <span className="truncate text-[8px] font-bold tracking-tight">
-                              {e.title}
-                            </span>
+                            <span className="truncate text-[8px] font-bold tracking-tight">{e.title}</span>
                             {isComplete ? (
-                              <span className="flex items-center gap-0.5 text-[7px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                              <span className="flex items-center gap-0.5 text-[7px] font-bold text-neutral-700 dark:text-neutral-300 shrink-0">
                                 <Check size={8} strokeWidth={3} />
-                                <span>Complete</span>
+                                <span>Done</span>
                               </span>
                             ) : (
                               <span className="text-[7px] font-mono font-bold shrink-0">{pct}%</span>
                             )}
                           </div>
                           <div className="w-full h-1 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-0.5">
-                            <div 
-                              className={`h-full rounded-full ${barColor}`} 
-                              style={{ width: `${pct}%` }} 
-                            />
+                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
                           </div>
                         </button>
                       );
@@ -259,121 +617,235 @@ export default function GlobalCalendarView({
           </div>
         </div>
 
-        {/* Sidebar: Details Panel */}
+        {/* Sidebar */}
         <div className="lg:col-span-1 bg-surface border border-border-custom rounded-xl p-4 flex flex-col h-[500px] overflow-y-auto">
-          {selectedEvent ? (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-border-custom pb-2">
-                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono uppercase tracking-wider font-semibold">
-                  Event Details
-                </span>
+          {mode === "create" ? (
+            <form onSubmit={handleSubmitCreate} className="flex flex-col h-full gap-3">
+              <div className="flex justify-between items-center border-b border-border-custom pb-2 shrink-0">
+                <span className="text-[10px] text-neutral-400 font-mono uppercase tracking-wider font-semibold">New Event</span>
+                <button type="button" onClick={() => setMode("idle")} className="text-neutral-400 hover:text-neutral-600">
+                  <X size={13} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {renderFormFields()}
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting || !form.title.trim() || !form.date || !form.projectId}
+                className="shrink-0 w-full bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold py-2 disabled:opacity-50 transition-colors"
+              >
+                {isSubmitting ? "Creating..." : "Create Event"}
+              </button>
+            </form>
+          ) : mode === "edit" ? (
+            <form onSubmit={handleSubmitEdit} className="flex flex-col h-full gap-3">
+              <div className="flex justify-between items-center border-b border-border-custom pb-2 shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <Pencil size={11} className="text-neutral-600" />
+                  <span className="text-[10px] text-neutral-600 dark:text-neutral-400 font-mono uppercase tracking-wider font-semibold">Edit Event</span>
+                </div>
+                <button type="button" onClick={() => { setMode("idle"); setEditingEventId(null); }} className="text-neutral-400 hover:text-neutral-600">
+                  <X size={13} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {renderFormFields()}
+              </div>
+              <div className="shrink-0 flex flex-col gap-2">
                 <button
-                  onClick={() => setSelectedEvent(null)}
-                  className="text-[10px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 underline"
+                  type="submit"
+                  disabled={isSubmitting || !form.title.trim() || !form.date}
+                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold py-2 disabled:opacity-50 transition-colors"
                 >
-                  Close
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-full flex items-center justify-center gap-1.5 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-xs font-semibold py-2 disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 size={11} />
+                  {isDeleting ? "Deleting..." : "Delete Event"}
+                </button>
+              </div>
+            </form>
+          ) : mode === "meeting-notes" ? (
+            <div className="flex flex-col h-full gap-3">
+              {/* Header */}
+              <div className="flex justify-between items-center border-b border-border-custom pb-2 shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <FileText size={11} className="text-neutral-600" />
+                  <span className="text-[10px] text-neutral-600 dark:text-neutral-400 font-mono uppercase tracking-wider font-semibold">Meeting Notes</span>
+                </div>
+                <button type="button" onClick={() => setMode("idle")} className="text-neutral-400 hover:text-neutral-600">
+                  <X size={13} />
                 </button>
               </div>
 
-               {/* Project & Priority Badges */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <div className="inline-block bg-neutral-100 dark:bg-neutral-800 border border-border-custom px-2 py-0.5 rounded text-[9px] font-semibold text-neutral-500 uppercase tracking-wide">
-                  {getProjectName(selectedEvent.projectId)}
-                </div>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${getEventStyles(selectedEvent.priority || "P4").bg} ${getEventStyles(selectedEvent.priority || "P4").text} border ${getEventStyles(selectedEvent.priority || "P4").border}`}>
-                  {selectedEvent.priority || "P4"}
-                </span>
-              </div>
-
-              <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                {selectedEvent.title}
-              </h4>
-
-              {selectedEvent.source === "agent_progress" && (
-                <div className="border border-border-custom p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900/30 space-y-2 mt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
-                      Project Progress
-                    </span>
-                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                      {selectedEvent.progressPct ?? 0}%
-                    </span>
+              {parsedDrafts.length === 0 ? (
+                /* Input phase */
+                <div className="flex flex-col gap-3 flex-1">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Project</label>
+                    <select
+                      value={meetingNotesProjectId}
+                      onChange={(e) => setMeetingNotesProjectId(e.target.value)}
+                      className="w-full text-xs px-2.5 py-1.5 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+                    >
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        (selectedEvent.progressPct ?? 0) >= 80 
-                          ? "bg-emerald-500" 
-                          : (selectedEvent.progressPct ?? 0) >= 40 
-                            ? "bg-amber-500" 
-                            : "bg-rose-500"
-                      }`}
-                      style={{ width: `${selectedEvent.progressPct ?? 0}%` }}
+                  <div className="space-y-1 flex-1 flex flex-col">
+                    <label className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider block">Paste meeting notes</label>
+                    <textarea
+                      value={meetingNotes}
+                      onChange={(e) => setMeetingNotes(e.target.value)}
+                      placeholder={"e.g.\nQ2 planning call — June 16\nStandup daily at 9am\nDeadline: ship v2 by June 20\nReview with client on Friday 3pm Zoom"}
+                      className="flex-1 w-full text-xs px-2.5 py-2 border border-border-custom bg-transparent rounded focus:outline-none focus:border-brand-accent placeholder-neutral-300 resize-none min-h-[140px]"
                     />
                   </div>
-                  <p className="text-[10px] text-neutral-405 leading-relaxed text-neutral-400">
-                    This is an automatically generated event tracking the completion rate of project tasks.
-                  </p>
+                  {draftErrors && (
+                    <p className="text-[10px] text-red-500">{draftErrors}</p>
+                  )}
+                  <button
+                    onClick={handleParseNotes}
+                    disabled={isParsing || !meetingNotes.trim() || !meetingNotesProjectId}
+                    className="shrink-0 w-full bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold py-2 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {isParsing ? (
+                      <>
+                        <Loader2 size={11} className="animate-spin" />
+                        <span>Parsing notes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={11} />
+                        <span>Extract Events</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
-
-              <div className="space-y-2.5 text-xs text-neutral-500">
-                <div className="flex items-center gap-2">
-                  <Clock size={13} className="text-neutral-400 shrink-0" />
-                  <span>
-                    {new Date(selectedEvent.startAt).toLocaleString([], {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
+              ) : (
+                /* Review phase */
+                <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+                  <p className="text-[10px] text-neutral-500 shrink-0">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">{parsedDrafts.length} event{parsedDrafts.length !== 1 ? "s" : ""}</span> found — review and confirm
+                  </p>
+                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5">
+                    {parsedDrafts.map((draft, idx) => {
+                      const styles = getEventStyles(draft.priority);
+                      const isOpen = expandedDraft === idx;
+                      return (
+                        <div key={idx} className={`border ${styles.border} rounded-lg overflow-hidden`}>
+                          <div className={`${styles.bg} px-2 py-1.5 flex items-center justify-between gap-1`}>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[10px] font-semibold ${styles.text} truncate`}>{draft.title}</p>
+                              <p className={`text-[9px] ${styles.text} opacity-70`}>{draft.date} · {draft.startTime}–{draft.endTime}</p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => setExpandedDraft(isOpen ? null : idx)}
+                                className={`${styles.text} opacity-70 hover:opacity-100`}
+                              >
+                                {isOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                              </button>
+                              <button
+                                onClick={() => removeDraft(idx)}
+                                className={`${styles.text} opacity-70 hover:opacity-100`}
+                              >
+                                <X size={11} />
+                              </button>
+                            </div>
+                          </div>
+                          {isOpen && (
+                            <div className="p-2 space-y-1.5 bg-surface">
+                              <input
+                                type="text"
+                                value={draft.title}
+                                onChange={(e) => updateDraft(idx, "title", e.target.value)}
+                                className="w-full text-[10px] px-2 py-1 border border-border-custom bg-transparent rounded focus:outline-none focus:border-brand-accent"
+                                placeholder="Title"
+                              />
+                              <div className="grid grid-cols-2 gap-1">
+                                <input
+                                  type="date"
+                                  value={draft.date}
+                                  onChange={(e) => updateDraft(idx, "date", e.target.value)}
+                                  className="text-[10px] px-1.5 py-1 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+                                />
+                                <select
+                                  value={draft.priority}
+                                  onChange={(e) => updateDraft(idx, "priority", e.target.value)}
+                                  className="text-[10px] px-1.5 py-1 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+                                >
+                                  {PRIORITIES.map((p) => (
+                                    <option key={p.value} value={p.value}>{p.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1">
+                                <input
+                                  type="time"
+                                  value={draft.startTime}
+                                  onChange={(e) => updateDraft(idx, "startTime", e.target.value)}
+                                  className="text-[10px] px-1.5 py-1 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+                                />
+                                <input
+                                  type="time"
+                                  value={draft.endTime}
+                                  onChange={(e) => updateDraft(idx, "endTime", e.target.value)}
+                                  className="text-[10px] px-1.5 py-1 border border-border-custom bg-surface rounded focus:outline-none focus:border-brand-accent"
+                                />
+                              </div>
+                              {draft.description && (
+                                <p className="text-[9px] text-neutral-500 leading-relaxed">{draft.description}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
                     })}
-                  </span>
-                </div>
-
-                {selectedEvent.location && (
-                  <div className="flex items-center gap-2">
-                    <MapPin size={13} className="text-neutral-400 shrink-0" />
-                    <span>{selectedEvent.location}</span>
                   </div>
-                )}
-
-                {selectedEvent.videoCallLink && (
-                  <div className="flex items-center gap-2">
-                    <Video size={13} className="text-neutral-400 shrink-0" />
-                    <a
-                      href={selectedEvent.videoCallLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline truncate"
+                  {draftErrors && (
+                    <p className="text-[10px] text-red-500 shrink-0">{draftErrors}</p>
+                  )}
+                  <div className="shrink-0 flex flex-col gap-1.5">
+                    <button
+                      onClick={handleCreateAllDrafts}
+                      disabled={isCreatingAll || parsedDrafts.length === 0}
+                      className="w-full bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold py-2 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      Join Meeting
-                    </a>
+                      {isCreatingAll ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" />
+                          <span>Creating events...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={11} />
+                          <span>Create {parsedDrafts.length} Event{parsedDrafts.length !== 1 ? "s" : ""}</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => { setParsedDrafts([]); setDraftErrors(null); }}
+                      className="w-full text-[10px] text-neutral-400 hover:text-neutral-600 py-1"
+                    >
+                      ← Back to notes
+                    </button>
                   </div>
-                )}
-
-                {selectedEvent.recurrence && (
-                  <div className="text-[10px] bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded inline-block font-medium">
-                    Repeats {selectedEvent.recurrence.toLowerCase()}
-                  </div>
-                )}
-              </div>
-
-              {selectedEvent.description && (
-                <div className="border-t border-border-custom pt-3 mt-3">
-                  <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
-                    Description
-                  </p>
-                  <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
-                    {selectedEvent.description}
-                  </p>
                 </div>
               )}
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center py-20">
-              <CalendarIcon size={20} className="text-neutral-300 mb-2" />
-              <p className="text-[11px] text-neutral-400 italic">
-                Select an event from the calendar grid to review schedule details and project context.
+            <div className="h-full flex flex-col items-center justify-center text-center py-20 space-y-2">
+              <CalendarIcon size={20} className="text-neutral-300" />
+              <p className="text-[11px] text-neutral-400">
+                Click a <span className="font-semibold text-neutral-600">date</span> to create an event, or click an <span className="font-semibold text-neutral-600">existing event</span> to edit it.
               </p>
             </div>
           )}

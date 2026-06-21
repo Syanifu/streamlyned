@@ -110,7 +110,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                         
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold px-1.5 py-0.2 rounded font-mono text-neutral-500">
+                            <span className="bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold px-1.5 py-0.2 rounded font-mono text-neutral-700 dark:text-neutral-300">
                               Source {index + 1}
                             </span>
                             <span className="text-[10px] text-neutral-400 font-medium">
@@ -120,7 +120,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                           <h4 className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 mt-1.5">
                             {r.title}
                           </h4>
-                          <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                          <p className="text-[11px] text-neutral-600 mt-1 leading-relaxed">
                             {r.excerpt}
                           </p>
                         </div>
@@ -143,7 +143,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       ) : (
         <div className="text-center py-20 border border-dashed border-border-custom rounded-xl bg-surface/50">
           <Search size={28} className="text-neutral-300 mx-auto mb-2" />
-          <p className="text-xs text-neutral-500">No query provided.</p>
+          <p className="text-xs text-neutral-600">No query provided.</p>
           <p className="text-[10px] text-neutral-400 mt-1">Submit a search from the header above to locate items.</p>
         </div>
       )}

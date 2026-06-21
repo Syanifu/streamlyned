@@ -4,13 +4,13 @@ import React from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
-  MessageSquare,
   MessageCircle,
   FileText,
   Calendar,
   Archive,
   Settings,
 } from "lucide-react";
+import ChatUnreadDot from "@/components/chat-unread-dot";
 
 interface ProjectHeaderProps {
   projectName: string;
@@ -20,6 +20,8 @@ interface ProjectHeaderProps {
   projectId: string;
   isArchived: boolean;
   showSettings?: boolean;
+  latestChatMessageAt?: string | null;
+  currentUserId?: string;
 }
 
 export default function ProjectHeader({
@@ -30,13 +32,14 @@ export default function ProjectHeader({
   projectId,
   isArchived,
   showSettings = false,
+  latestChatMessageAt = null,
+  currentUserId = "",
 }: ProjectHeaderProps) {
   const toolSpecs: Record<string, { label: string; icon: React.ReactNode }> = {
-    tasks:       { label: "Tasks",      icon: <CheckCircle2 size={14} /> },
-    discussions: { label: "Discussions",icon: <MessageSquare size={14} /> },
-    chat:        { label: "Chat",       icon: <MessageCircle size={14} /> },
-    docs:        { label: "Docs",       icon: <FileText size={14} /> },
-    calendar:    { label: "Calendar",   icon: <Calendar size={14} /> },
+    tasks:    { label: "Tasks",     icon: <CheckCircle2 size={14} /> },
+    chat:     { label: "Chatroom",  icon: <MessageCircle size={14} /> },
+    docs:     { label: "Docs",      icon: <FileText size={14} /> },
+    calendar: { label: "Calendar",  icon: <Calendar size={14} /> },
   };
 
   return (
@@ -74,11 +77,18 @@ export default function ProjectHeader({
               className={`flex items-center gap-1.5 px-3 py-2 border-b-2 font-semibold text-xs tracking-wide uppercase transition-all ${
                 isActive
                   ? "border-foreground text-foreground"
-                  : "border-transparent text-neutral-500 hover:text-foreground"
+                  : "border-transparent text-neutral-600 hover:text-foreground"
               }`}
             >
               {spec.icon}
               <span>{spec.label}</span>
+              {tool === "chat" && !isActive && currentUserId && (
+                <ChatUnreadDot
+                  projectId={projectId}
+                  currentUserId={currentUserId}
+                  latestChatMessageAt={latestChatMessageAt}
+                />
+              )}
             </Link>
           );
         })}
@@ -89,7 +99,7 @@ export default function ProjectHeader({
             className={`flex items-center gap-1.5 px-3 py-2 border-b-2 font-semibold text-xs tracking-wide uppercase transition-all ${
               activeTab === "settings"
                 ? "border-foreground text-foreground"
-                : "border-transparent text-neutral-500 hover:text-foreground"
+                : "border-transparent text-neutral-600 hover:text-foreground"
             }`}
           >
             <Settings size={14} />

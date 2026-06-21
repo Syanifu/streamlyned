@@ -18,7 +18,7 @@ export default async function AskAiPage() {
     <div className="flex-1 flex flex-col space-y-6 min-h-0">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-neutral-800 dark:text-neutral-100">
-          Super Admin AI Console
+          Ashy — Super Admin Console
         </h1>
         <p className="text-xs text-neutral-400 mt-1">
           Ask questions about active projects, overdue tasks, team members, and overall operations.

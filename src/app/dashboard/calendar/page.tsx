@@ -1,8 +1,8 @@
-import React from "react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import GlobalCalendarView from "@/components/global-calendar-view";
+import GoogleCalendarButton from "@/components/google-calendar-button";
 
 export default async function GlobalCalendarPage() {
   const session = await getSession();
@@ -30,7 +30,11 @@ export default async function GlobalCalendarPage() {
 
   const projectIds = projects.map((p) => p.id);
 
-  // 2 & 3. Query all calendar events and tasks in these projects in parallel
+  const googleToken = await db.googleCalendarToken.findUnique({
+    where: { userId: session.user.id },
+    select: { syncedAt: true },
+  });
+
   const [events, tasks] = await Promise.all([
     db.calendarEvent.findMany({
       where: {
@@ -88,19 +92,29 @@ export default async function GlobalCalendarPage() {
 
   return (
     <div className="flex-1 flex flex-col space-y-6 min-h-0">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-neutral-800 dark:text-neutral-100">
-          Workspace Calendar
-        </h1>
-        <p className="text-xs text-neutral-400 mt-1">
-          Aggregated view of all deadlines, meetings, and events across your active projects.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-neutral-800 dark:text-neutral-100">
+            Workspace Calendar
+          </h1>
+          <p className="text-xs text-neutral-400 mt-1">
+            Aggregated view of all deadlines, meetings, and events across your active projects.
+          </p>
+        </div>
+        <div className="shrink-0 pt-0.5">
+          <GoogleCalendarButton
+            isConnected={!!googleToken}
+            syncedAt={googleToken?.syncedAt?.toISOString() ?? null}
+          />
+        </div>
       </div>
 
       <GlobalCalendarView
         projects={projects}
         events={formattedEvents}
         tasks={formattedTasks}
+        currentUserId={session.user.id}
+        workspaceSlug={session.workspace.slug}
       />
     </div>
   );
