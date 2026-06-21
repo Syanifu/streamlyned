@@ -51,14 +51,21 @@ export async function GET(request: Request) {
     const metadata = data.user.user_metadata || {};
     const fullName = metadata.full_name || metadata.name || email.split("@")[0];
     const formattedName = fullName.charAt(0).toUpperCase() + fullName.slice(1);
+    const googleAvatar = metadata.avatar_url as string | undefined;
 
     if (!user) {
       user = await db.user.create({
         data: {
           email,
           name: formattedName,
-          avatarUrl: metadata.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${email.split("@")[0]}`,
+          avatarUrl: googleAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${email.split("@")[0]}`,
         },
+      });
+    } else if (googleAvatar && !user.avatarUrl) {
+      // Backfill Google profile picture for existing users who have none
+      user = await db.user.update({
+        where: { id: user.id },
+        data: { avatarUrl: googleAvatar },
       });
     }
 

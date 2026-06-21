@@ -28,9 +28,17 @@ export default async function ProfilePage() {
     }),
   ]);
 
+  // Surface the Google photo as a selectable option if the stored avatar is from Google.
+  // This covers the common case (new signup) without needing a separate DB column.
+  const googleAvatarUrl =
+    session.user.avatarUrl?.includes("googleusercontent.com")
+      ? session.user.avatarUrl
+      : null;
+
   return (
     <ProfileView
       currentUser={session.user}
+      googleAvatarUrl={googleAvatarUrl}
       role={session.role}
       workspaceName={session.workspace.name}
       integrations={{

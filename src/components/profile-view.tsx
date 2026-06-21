@@ -22,6 +22,7 @@ interface ProfileViewProps {
     coverUrl: string | null;
     planTier: string;
   };
+  googleAvatarUrl: string | null;
   role: string;
   workspaceName: string;
   integrations: {
@@ -256,13 +257,18 @@ function IntegrationRow({
 
 export default function ProfileView({
   currentUser,
+  googleAvatarUrl,
   role,
   workspaceName,
   integrations,
 }: ProfileViewProps) {
   const router = useRouter();
   const [name, setName] = useState(currentUser.name);
-  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || "");
+  // Fall back to Google photo → name-seeded Dicebear
+  const defaultAvatar =
+    googleAvatarUrl ||
+    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(currentUser.name)}`;
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || defaultAvatar);
   const [coverUrl, setCoverUrl] = useState(currentUser.coverUrl || "");
   const [planTier, setPlanTier] = useState(currentUser.planTier || "standard");
   const [isSaving, setIsSaving] = useState(false);
@@ -328,13 +334,11 @@ export default function ProfileView({
         </div>
         <div className="absolute -bottom-8 left-8 z-10">
           <div className="w-20 h-20 rounded-xl border-4 border-surface overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-md">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <User size={32} className="text-neutral-400" />
-              </div>
-            )}
+            <img
+              src={avatarUrl || defaultAvatar}
+              alt={name}
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </div>
@@ -446,9 +450,26 @@ export default function ProfileView({
 
           {/* Avatar Presets */}
           <div className="space-y-2">
-            <label className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
-              Choose Avatar Preset
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
+                Choose Avatar
+              </label>
+              {googleAvatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl(googleAvatarUrl)}
+                  className={`flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors ${
+                    avatarUrl === googleAvatarUrl
+                      ? "border-neutral-800 dark:border-neutral-200 bg-neutral-50 dark:bg-neutral-900/30 text-neutral-900 dark:text-white"
+                      : "border-border-custom text-neutral-500 hover:border-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+                  }`}
+                >
+                  <img src={googleAvatarUrl} alt="Google" className="w-4 h-4 rounded-full" />
+                  <span>Use Google Photo</span>
+                  {avatarUrl === googleAvatarUrl && <Check size={10} />}
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
               {avatarPresets.map((preset) => {
                 const isSelected = avatarUrl === preset.url;
