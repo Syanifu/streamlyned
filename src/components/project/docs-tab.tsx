@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createDocAction, updateDocAction, restoreDocVersionAction, addDocCommentAction } from "@/app/actions/docs";
 import { getProjectFilesAction, deleteProjectFileAction } from "@/app/actions/project";
-import { FileText, Plus, ArrowLeft, History, Send, RefreshCw, FileCode, Eye, EyeOff, Paperclip, Upload, Trash2, Download, X } from "lucide-react";
+import { FileText, Plus, ArrowLeft, History, Send, RefreshCw, FileCode, Eye, EyeOff, Paperclip, Upload, Trash2, Download, X, BookOpen } from "lucide-react";
+import BionicText from "@/components/bionic-text";
+import { useBionicReading } from "@/hooks/use-bionic-reading";
 import { toggleClientVisibility } from "@/app/actions/clientmode";
 
 interface DocCompact {
@@ -65,6 +67,8 @@ export default function DocsTab({
   const [commentText, setCommentText] = useState("");
   const [isCommenting, setIsCommenting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const { enabled: bionicEnabled } = useBionicReading();
 
   // Project files state
   const [projectFiles, setProjectFiles] = useState<ProjectFileItem[]>([]);
@@ -224,23 +228,51 @@ export default function DocsTab({
           </button>
 
           <form onSubmit={handleUpdateDoc} className="bg-surface border border-border-custom rounded-xl p-6 space-y-4">
-            <div>
+            <div className="flex items-center justify-between gap-3">
               <input
                 type="text"
                 required
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full text-base font-semibold border-b border-border-custom pb-2 focus:outline-none focus:border-brand-accent bg-transparent placeholder-neutral-400"
+                className="flex-1 text-base font-semibold border-b border-border-custom pb-2 focus:outline-none focus:border-brand-accent bg-transparent placeholder-neutral-400"
+                disabled={previewMode}
               />
+              {/* Read / Edit toggle */}
+              <button
+                type="button"
+                onClick={() => setPreviewMode((p) => !p)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ${
+                  previewMode
+                    ? "bg-neutral-900 text-white border-neutral-900"
+                    : "border-border-custom text-neutral-600 hover:border-neutral-400"
+                }`}
+              >
+                <BookOpen size={12} />
+                <span>{previewMode ? "Edit" : "Read"}</span>
+              </button>
             </div>
             <div>
-              <textarea
-                rows={15}
-                placeholder="Write doc content (supports markdown styling)..."
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full text-xs px-3.5 py-3 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-brand-accent placeholder-neutral-400 leading-relaxed font-mono"
-              />
+              {previewMode ? (
+                <div className="min-h-[240px] px-3.5 py-3 border border-border-custom bg-transparent rounded-lg text-xs leading-relaxed">
+                  {editContent.trim() ? (
+                    bionicEnabled ? (
+                      <BionicText text={editContent} className="text-neutral-800 dark:text-neutral-200" />
+                    ) : (
+                      <div className="text-neutral-800 dark:text-neutral-200 whitespace-pre-wrap">{editContent}</div>
+                    )
+                  ) : (
+                    <p className="text-neutral-400 italic">No content yet.</p>
+                  )}
+                </div>
+              ) : (
+                <textarea
+                  rows={15}
+                  placeholder="Write doc content (supports markdown styling)..."
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full text-xs px-3.5 py-3 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-brand-accent placeholder-neutral-400 leading-relaxed font-mono"
+                />
+              )}
             </div>
             <div className="flex justify-between items-center pt-2">
               <div className="flex items-center gap-2">

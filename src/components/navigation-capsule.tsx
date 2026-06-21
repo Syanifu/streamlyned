@@ -16,6 +16,7 @@ import {
   Sparkles
 } from "lucide-react";
 import ThemeToggle from "./theme-toggle";
+import BionicToggle from "./bionic-toggle";
 
 interface DmChatInfo {
   dmGroupId: string;
@@ -130,7 +131,8 @@ export default function NavigationCapsule({
         )}
 
         <span className="w-px h-4 bg-neutral-350 dark:bg-neutral-800 shrink-0 self-center" />
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <BionicToggle />
           <ThemeToggle initialTheme={theme} initialColor={colorBg} />
         </div>
         <span className="w-px h-4 bg-neutral-350 dark:bg-neutral-800 shrink-0 self-center" />

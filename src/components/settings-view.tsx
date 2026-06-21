@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { inviteUserAction, changeUserRoleAction, removeWorkspaceMemberAction } from "@/app/actions/settings";
-import { Settings, Users, UserPlus, ShieldAlert, Check, Trash2, Plug } from "lucide-react";
+import { Settings, Users, UserPlus, ShieldAlert, Check, Trash2, Plug, BookOpen } from "lucide-react";
 import NotionImportModal from "@/components/notion-import-modal";
+import { useBionicReading } from "@/hooks/use-bionic-reading";
 
 interface MemberCompact {
   id: string;
@@ -47,6 +48,7 @@ export default function SettingsView({
   const [memberError, setMemberError] = useState<string | null>(null);
 
   const isOwner = currentUserRole === "OWNER";
+  const { enabled: bionicEnabled, toggle: toggleBionic } = useBionicReading();
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     setLoadingMemberId(memberId);
@@ -73,7 +75,7 @@ export default function SettingsView({
     setLoadingMemberId(null);
   };
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleInvite = async (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim() || !inviteName.trim()) return;
     setIsInviting(true);
@@ -254,6 +256,37 @@ export default function SettingsView({
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* Reading Preferences */}
+      <div className="bg-surface border border-border-custom rounded-xl p-6 space-y-4 shadow-sm">
+        <div className="flex items-center gap-2 text-neutral-800 dark:text-neutral-200">
+          <BookOpen size={16} className="text-neutral-400" />
+          <h2 className="text-sm font-semibold">Reading Preferences</h2>
+        </div>
+        <div className="flex items-center justify-between py-3 border-t border-border-custom">
+          <div>
+            <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Bionic Reading</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">
+              Bold the first half of each word in documents to help your eye anchor faster while reading.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleBionic}
+            role="switch"
+            aria-checked={bionicEnabled}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+              bionicEnabled ? "bg-neutral-900 dark:bg-white" : "bg-neutral-200 dark:bg-neutral-700"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-neutral-900 shadow-sm transform transition duration-200 ${
+                bionicEnabled ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
         </div>
       </div>
 
