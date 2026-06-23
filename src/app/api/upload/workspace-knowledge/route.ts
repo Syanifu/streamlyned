@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { claimStorage, releaseStorage } from "@/lib/storage-quota";
 import { indexEntity } from "@/lib/ai/search";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
@@ -34,6 +35,12 @@ export async function POST(request: Request) {
 
     const fileName = file.name;
     const mimeType = file.type || "application/octet-stream";
+    try {
+      await claimStorage(session.user.id, file.size);
+    } catch (quotaErr: any) {
+      return NextResponse.json({ error: quotaErr.message }, { status: 413 });
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -133,6 +140,7 @@ export async function DELETE(request: Request) {
     }
 
     await db.workspaceKnowledge.delete({ where: { id } });
+    await releaseStorage(file.uploadedById, file.fileSize);
 
     // Remove embedding
     await db.embedding.deleteMany({

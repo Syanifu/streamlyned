@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { releaseStorage } from "@/lib/storage-quota";
 
 export async function createProjectAction(data: {
   name: string;
@@ -356,6 +357,7 @@ export async function deleteProjectFileAction(projectId: string, fileId: string)
     if (!file) throw new Error("File not found.");
 
     await db.projectFile.delete({ where: { id: fileId } });
+    await releaseStorage(file.uploadedById, file.fileSize);
 
     revalidatePath(`/dashboard/projects/${projectId}`);
     return { success: true };

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateProfileAction } from "@/app/actions/profile";
 import { logoutAction } from "@/app/actions/auth";
 import { disconnectIntegrationAction } from "@/app/actions/integrations";
-import { User, Mail, Shield, Check, Save, LogOut, Plug, Upload } from "lucide-react";
+import { Mail, Shield, Check, Save, LogOut, Plug, Upload, HardDrive } from "lucide-react";
 
 interface IntegrationStatus {
   connected: boolean;
@@ -23,6 +23,8 @@ interface ProfileViewProps {
     planTier: string;
   };
   googleAvatarUrl: string | null;
+  storageUsedBytes: number;
+  storageLimitBytes: number;
   role: string;
   workspaceName: string;
   integrations: {
@@ -258,6 +260,8 @@ function IntegrationRow({
 export default function ProfileView({
   currentUser,
   googleAvatarUrl,
+  storageUsedBytes,
+  storageLimitBytes,
   role,
   workspaceName,
   integrations,
@@ -577,6 +581,39 @@ export default function ProfileView({
               <Save size={13} />
               <span>Save Changes</span>
             </button>
+          </div>
+
+          {/* ── Storage ─────────────────────────────────────────────────────── */}
+          <div className="pt-6 border-t border-border-custom space-y-3">
+            <div className="flex items-center gap-2">
+              <HardDrive size={14} className="text-neutral-400" />
+              <div>
+                <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
+                  Storage
+                </h3>
+                <p className="text-[10px] text-neutral-400 mt-0.5">
+                  Used across project files, chat attachments, and knowledge base uploads.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="w-full h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    storageUsedBytes / storageLimitBytes > 0.9
+                      ? "bg-red-500"
+                      : storageUsedBytes / storageLimitBytes > 0.7
+                      ? "bg-amber-500"
+                      : "bg-neutral-900 dark:bg-white"
+                  }`}
+                  style={{ width: `${Math.min(100, (storageUsedBytes / storageLimitBytes) * 100).toFixed(1)}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-neutral-400">
+                {(storageUsedBytes / (1024 * 1024)).toFixed(1)} MB used of{" "}
+                {(storageLimitBytes / (1024 * 1024)).toFixed(0)} MB
+              </p>
+            </div>
           </div>
 
           {/* ── Connected Apps ──────────────────────────────────────────────── */}

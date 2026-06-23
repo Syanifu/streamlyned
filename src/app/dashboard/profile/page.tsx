@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import ProfileView from "@/components/profile-view";
+import { STORAGE_LIMIT_BYTES } from "@/lib/storage-quota";
 
 export default async function ProfilePage() {
   const session = await getSession();
@@ -35,10 +36,22 @@ export default async function ProfilePage() {
       ? session.user.avatarUrl
       : null;
 
+  let storageUsedBytes = 0;
+  try {
+    const [userRecord] = await db.$queryRaw<{ storageUsedBytes: bigint }[]>`
+      SELECT "storageUsedBytes" FROM "User" WHERE id = ${session.user.id}
+    `;
+    storageUsedBytes = Number(userRecord?.storageUsedBytes ?? 0);
+  } catch {
+    // Column not yet migrated — shows 0 until migration runs
+  }
+
   return (
     <ProfileView
       currentUser={session.user}
       googleAvatarUrl={googleAvatarUrl}
+      storageUsedBytes={storageUsedBytes}
+      storageLimitBytes={STORAGE_LIMIT_BYTES}
       role={session.role}
       workspaceName={session.workspace.name}
       integrations={{

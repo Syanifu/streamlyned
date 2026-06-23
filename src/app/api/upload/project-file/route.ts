@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { claimStorage, releaseStorage } from "@/lib/storage-quota";
 import path from "path";
 import fs from "fs";
 
-const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_SIZE = 100 * 1024 * 1024; // 100 MB per file
 
 export async function POST(request: Request) {
   try {
@@ -27,11 +28,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File exceeds the 100 MB limit" }, { status: 413 });
     }
 
-    // Verify project membership
+    // Quota check — throws with a user-friendly message if over 200 MB
+    try {
+      await claimStorage(session.user.id, file.size);
+    } catch (quotaErr: any) {
+      return NextResponse.json({ error: quotaErr.message }, { status: 413 });
+    }
+
+    // Verify project membership — release quota if access denied
     const member = await db.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId: session.user.id } },
     });
     if (!member) {
+      await releaseStorage(session.user.id, file.size);
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { getSession } from "@/lib/auth";
+import { claimStorage } from "@/lib/storage-quota";
 
-const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_SIZE = 100 * 1024 * 1024; // 100 MB per file
 
 export async function POST(request: Request) {
   try {
@@ -19,10 +20,13 @@ export async function POST(request: Request) {
     }
 
     if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File exceeds the 100 MB limit" },
-        { status: 413 }
-      );
+      return NextResponse.json({ error: "File exceeds the 100 MB limit" }, { status: 413 });
+    }
+
+    try {
+      await claimStorage(session.user.id, file.size);
+    } catch (quotaErr: any) {
+      return NextResponse.json({ error: quotaErr.message }, { status: 413 });
     }
 
     // Sanitise the file name so it's safe as a blob path
