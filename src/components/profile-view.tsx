@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { updateProfileAction } from "@/app/actions/profile";
 import { logoutAction } from "@/app/actions/auth";
 import { disconnectIntegrationAction } from "@/app/actions/integrations";
-import { Mail, Shield, Check, Save, LogOut, Plug, Upload, HardDrive } from "lucide-react";
+import { Mail, Shield, Check, Save, LogOut, Plug, Upload, HardDrive, Download } from "lucide-react";
+import Link from "next/link";
 
 interface IntegrationStatus {
   connected: boolean;
@@ -106,6 +107,20 @@ const INTEGRATIONS = [
       </div>
     ),
   },
+  {
+    key: "basecamp" as const,
+    name: "Basecamp",
+    description: "Import projects, tasks, messages, and docs from Basecamp 3",
+    type: "import" as const,
+    href: "/dashboard/import",
+    icon: (
+      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 bg-[#F0423F]">
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+        </svg>
+      </div>
+    ),
+  },
 ] as const;
 
 // ── Toggle switch ─────────────────────────────────────────────────────────────
@@ -153,14 +168,17 @@ function IntegrationRow({
   integration,
   status,
   onDisconnect,
+  role,
 }: {
   integration: (typeof INTEGRATIONS)[number];
   status: IntegrationStatus;
   onDisconnect: (provider: string) => Promise<void>;
+  role: string;
 }) {
   const [loading, setLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const isDisabled = integration.type === "disabled";
+  const isImport = integration.type === "import";
 
   const handleToggle = async () => {
     if (isDisabled || loading) return;
@@ -228,28 +246,44 @@ function IntegrationRow({
         </div>
       </div>
 
-      {/* Right: toggle + upload hint */}
+      {/* Right: toggle / import button / upload hint */}
       <div className="flex items-center gap-2 ml-4 shrink-0">
-        {integration.type === "file" && !status.connected && (
+        {isImport ? (
+          (role === "OWNER" || role === "ADMIN") ? (
+            <Link
+              href={"href" in integration ? integration.href : "/dashboard/import"}
+              className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border-custom hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-300"
+            >
+              <Download size={10} />
+              Import
+            </Link>
+          ) : (
+            <span className="text-[9px] text-neutral-400">Owner only</span>
+          )
+        ) : (
           <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".md,.txt,.zip"
-              className="hidden"
-              onChange={handleFileChange}
+            {integration.type === "file" && !status.connected && (
+              <>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".md,.txt,.zip"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <span className="text-[9px] text-neutral-400 flex items-center gap-0.5">
+                  <Upload size={9} /> .md / .txt
+                </span>
+              </>
+            )}
+            <Toggle
+              checked={status.connected}
+              onChange={handleToggle}
+              disabled={isDisabled}
+              loading={loading}
             />
-            <span className="text-[9px] text-neutral-400 flex items-center gap-0.5">
-              <Upload size={9} /> .md / .txt
-            </span>
           </>
         )}
-        <Toggle
-          checked={status.connected}
-          onChange={handleToggle}
-          disabled={isDisabled}
-          loading={loading}
-        />
       </div>
     </div>
   );
@@ -635,8 +669,9 @@ export default function ProfileView({
                 <IntegrationRow
                   key={integration.key}
                   integration={integration}
-                  status={integrations[integration.key]}
+                  status={integrations[integration.key as keyof typeof integrations] ?? { connected: false, accountName: null, lastSyncedAt: null }}
                   onDisconnect={handleDisconnect}
+                  role={role}
                 />
               ))}
             </div>
