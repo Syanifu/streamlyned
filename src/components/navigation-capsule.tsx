@@ -13,7 +13,8 @@ import {
   Compass,
   Calendar as CalendarIcon,
   LineChart,
-  Sparkles
+  Sparkles,
+  Download
 } from "lucide-react";
 import ThemeToggle from "./theme-toggle";
 import BionicToggle from "./bionic-toggle";
@@ -79,10 +80,16 @@ export default function NavigationCapsule({
       <div className="hidden md:flex items-center gap-2.5 bg-surface border border-border-custom hover:border-neutral-400 dark:hover:border-neutral-700 px-3.5 py-1.5 rounded-full shadow-lg transition-all duration-200 max-w-full overflow-x-auto no-scrollbar">
 
         {!isClient && (role === "OWNER" || role === "ADMIN") && (
-          <Link href="/dashboard/settings" className={getLinkClass(isActive("/dashboard/settings", true))}>
-            <Settings size={13} />
-            <span>Settings</span>
-          </Link>
+          <>
+            <Link href="/dashboard/settings" className={getLinkClass(isActive("/dashboard/settings", true))}>
+              <Settings size={13} />
+              <span>Settings</span>
+            </Link>
+            <Link href="/dashboard/import" className={getLinkClass(isActive("/dashboard/import", true))}>
+              <Download size={13} />
+              <span>Import</span>
+            </Link>
+          </>
         )}
 
         {role === "super_admin" && (
@@ -191,6 +198,13 @@ export default function NavigationCapsule({
             <Compass size={20} strokeWidth={isActive("/dashboard/everything", true) ? 2.5 : 1.8} />
             <span className="text-[9px] font-semibold uppercase tracking-wider">All</span>
           </Link>
+
+          {!isClient && (role === "OWNER" || role === "ADMIN") && (
+            <Link href="/dashboard/import" className={getMobileLinkClass(isActive("/dashboard/import", true))}>
+              <Download size={20} strokeWidth={isActive("/dashboard/import", true) ? 2.5 : 1.8} />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Import</span>
+            </Link>
+          )}
 
           <Link href="/dashboard/profile" className={getMobileLinkClass(isActive("/dashboard/profile", true))}>
             {avatarUrl ? (
