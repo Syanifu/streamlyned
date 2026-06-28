@@ -3,13 +3,16 @@ import { redirect } from "next/navigation";
 import LandingForm from "@/components/landing-form";
 import { Sparkles } from "lucide-react";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const session = await getSession();
 
   // If already authenticated, go directly to the workspace dashboard
   if (session) {
     redirect("/dashboard");
   }
+
+  const params = await searchParams;
+  const authError = params.error;
 
   return (
     <div className="flex-1 flex flex-col justify-between bg-background px-4 md:px-6 py-6 md:py-16">
@@ -62,6 +65,11 @@ export default async function Home() {
 
         {/* Right Side: Setup form */}
         <div className="md:col-span-5 flex flex-col items-center md:items-end justify-center">
+          {authError && (
+            <div className="w-full max-w-md mb-3 text-xs bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-3 rounded-lg border border-red-100 dark:border-red-950/30">
+              Sign-in failed: <span className="font-mono">{decodeURIComponent(authError)}</span>
+            </div>
+          )}
           <LandingForm />
         </div>
       </div>
