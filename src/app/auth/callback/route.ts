@@ -33,11 +33,12 @@ export async function GET(request: Request) {
     );
 
     // Exchange auth code for active Supabase session
+    console.log("Auth Callback: Exchanging code, SUPABASE_URL exists:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
-      console.error("Auth Callback: Session exchange failed:", error.message);
-      return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
+      console.error("Auth Callback: Session exchange failed:", error.message, error.status);
+      return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(`SessionExchangeFailed: ${error.message}`)}`);
     }
 
     const email = data?.user?.email;
@@ -162,9 +163,10 @@ export async function GET(request: Request) {
     await setPendingOnboardingEmail(email);
     return NextResponse.redirect(`${origin}/onboarding`);
   } catch (err: any) {
-    console.error("Auth Callback GET Error:", err);
+    console.error("Auth Callback GET Error (full):", err?.message, err?.code, JSON.stringify(err));
     const host = request.headers.get("host") || "localhost:3000";
     const protocol = request.headers.get("x-forwarded-proto") || "http";
-    return NextResponse.redirect(`${protocol}://${host}/?error=InternalCallbackError`);
+    const errMsg = encodeURIComponent(err?.message || "UnknownError");
+    return NextResponse.redirect(`${protocol}://${host}/?error=${errMsg}`);
   }
 }
