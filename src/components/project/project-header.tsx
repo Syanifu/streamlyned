@@ -9,6 +9,10 @@ import {
   Calendar,
   Archive,
   Settings,
+  Database,
+  Coins,
+  FileCheck,
+  LineChart,
 } from "lucide-react";
 import ChatUnreadDot from "@/components/chat-unread-dot";
 
@@ -36,10 +40,14 @@ export default function ProjectHeader({
   currentUserId = "",
 }: ProjectHeaderProps) {
   const toolSpecs: Record<string, { label: string; icon: React.ReactNode }> = {
-    tasks:    { label: "Tasks",     icon: <CheckCircle2 size={14} /> },
-    chat:     { label: "Chatroom",  icon: <MessageCircle size={14} /> },
-    docs:     { label: "Docs",      icon: <FileText size={14} /> },
-    calendar: { label: "Calendar",  icon: <Calendar size={14} /> },
+    tasks:     { label: "Tasks",      icon: <CheckCircle2 size={14} /> },
+    chat:      { label: "Chatroom",   icon: <MessageCircle size={14} /> },
+    docs:      { label: "Docs",       icon: <FileText size={14} /> },
+    calendar:  { label: "Calendar",   icon: <Calendar size={14} /> },
+    inventory: { label: "Inventory",  icon: <Database size={14} /> },
+    billing:   { label: "Billing",    icon: <Coins size={14} /> },
+    drawings:  { label: "QC & Docs",  icon: <FileCheck size={14} /> },
+    analytics: { label: "Analytics", icon: <LineChart size={14} /> },
   };
 
   return (

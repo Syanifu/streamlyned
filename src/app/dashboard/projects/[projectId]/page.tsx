@@ -8,6 +8,10 @@ import ChatTab from "@/components/project/chat-tab";
 import DocsTab from "@/components/project/docs-tab";
 import CalendarTab from "@/components/project/calendar-tab";
 import ProjectSettingsTab from "@/components/project/settings-tab";
+import InventoryTab from "@/components/project/inventory-tab";
+import BillingTab from "@/components/project/billing-tab";
+import DrawingsTab from "@/components/project/drawings-tab";
+import AnalyticsTab from "@/components/project/analytics-tab";
 
 interface ProjectPageProps {
   params: Promise<{ projectId: string }>;
@@ -78,9 +82,10 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
   const parsedTools = JSON.parse(project.tools) as string[];
   const enabledProjectTools = parsedTools.filter((t) => t !== "checkins");
+  const extraTools = ["inventory", "billing", "drawings", "analytics"];
   const allowedTools = session.role === "CLIENT"
     ? (JSON.parse(currentMember.visibleTools) as string[]).filter(t => enabledProjectTools.includes(t))
-    : enabledProjectTools;
+    : [...enabledProjectTools, ...extraTools];
 
   const isAdminOrOwner = session.role === "OWNER" || session.role === "ADMIN";
 
@@ -262,6 +267,30 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
             workspaceUsers={allWorkspaceUsers}
             currentUserId={session.user.id}
             currentUserRole={session.role}
+          />
+        )}
+        {tab === "inventory" && (
+          <InventoryTab
+            projectId={projectId}
+            workspaceId={session.workspace.id}
+          />
+        )}
+        {tab === "billing" && (
+          <BillingTab
+            projectId={projectId}
+            workspaceId={session.workspace.id}
+          />
+        )}
+        {tab === "drawings" && (
+          <DrawingsTab
+            projectId={projectId}
+            workspaceId={session.workspace.id}
+          />
+        )}
+        {tab === "analytics" && (
+          <AnalyticsTab
+            projectId={projectId}
+            workspaceId={session.workspace.id}
           />
         )}
       </div>
