@@ -92,7 +92,7 @@ async function main() {
 
   console.log("  - Certifying RA Bill #1 with Qty 100 (Certified: 30,000)...");
   // Certify all items
-  const certItems1 = bill1.items.map(item => ({ itemId: item.id, certifiedQty: 100 }));
+  const certItems1 = bill1.items.map((item: any) => ({ itemId: item.id, certifiedQty: 100 }));
   const certifiedBill1 = await certifyRaBill(bill1.id, certItems1, db);
 
   console.log(`    Certified Bill #1 metrics:`);
@@ -114,7 +114,7 @@ async function main() {
   );
 
   console.log("  - Certifying RA Bill #2 with Qty 300 (Cumulative certified: 90,000)...");
-  const certItems2 = bill2.items.map(item => ({ itemId: item.id, certifiedQty: 300 }));
+  const certItems2 = bill2.items.map((item: any) => ({ itemId: item.id, certifiedQty: 300 }));
   const certifiedBill2 = await certifyRaBill(bill2.id, certItems2, db);
 
   console.log(`    Certified Bill #2 metrics:`);
