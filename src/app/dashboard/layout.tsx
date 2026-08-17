@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import NavigationCapsule from "@/components/navigation-capsule";
+import NavigationSidebar from "@/components/navigation-sidebar";
 import PageTransition from "@/components/page-transition";
 import ContextChatDrawer from "@/components/context-chat-drawer";
 
@@ -45,32 +45,27 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden font-sans">
-      {/* Top Nav Header */}
-      <header className="h-14 md:h-16 bg-background flex items-center px-4 md:px-8 shrink-0 z-10 border-b border-border-custom md:border-0">
-        {/* Wordmark */}
-        <div className="flex items-center shrink-0">
-          <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 tracking-tight">
-            Streamlyned
-          </span>
-        </div>
-
-        {/* Navigation — centered on desktop, hidden on mobile (bottom nav handles it) */}
-        <div className="flex-1 flex justify-center">
-          <NavigationCapsule
-            role={session.role}
-            avatarUrl={session.user.avatarUrl}
-            userName={session.user.name}
-            theme={theme}
-            colorBg={colorBg}
-            userId={session.user.id}
-            dmChatInfo={dmChatInfo}
-          />
-        </div>
-      </header>
+    <div className="flex h-screen bg-background overflow-hidden font-sans">
+      {/* Collapsible Left Sidebar */}
+      <NavigationSidebar
+        role={session.role}
+        avatarUrl={session.user.avatarUrl}
+        userName={session.user.name}
+        theme={theme}
+        colorBg={colorBg}
+        userId={session.user.id}
+        dmChatInfo={dmChatInfo}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Mobile Header (hidden on desktop) */}
+        <header className="md:hidden h-14 bg-surface flex items-center justify-between px-4 border-b border-border-custom shrink-0 z-10">
+          <span className="text-sm font-semibold tracking-tight text-neutral-800 dark:text-neutral-200">
+            Streamlyned
+          </span>
+        </header>
+
         <main className="flex-1 overflow-y-auto bg-background p-4 md:p-8 pb-24 md:pb-8 min-w-0">
           <div className="max-w-5xl mx-auto min-h-full flex flex-col">
             <PageTransition>
