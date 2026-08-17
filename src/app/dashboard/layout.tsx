@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import NavigationSidebar from "@/components/navigation-sidebar";
 import PageTransition from "@/components/page-transition";
 import ContextChatDrawer from "@/components/context-chat-drawer";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default async function DashboardLayout({
   children,
@@ -59,11 +60,16 @@ export default async function DashboardLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header (hidden on desktop) */}
-        <header className="md:hidden h-14 bg-surface flex items-center justify-between px-4 border-b border-border-custom shrink-0 z-10">
-          <span className="text-sm font-semibold tracking-tight text-neutral-800 dark:text-neutral-200">
-            Streamlyned
-          </span>
+        {/* Top Header (Color switching on the top right) */}
+        <header className="h-14 bg-surface border-b border-border-custom px-4 md:px-8 flex items-center justify-between shrink-0 z-10">
+          <div>
+            <span className="md:hidden text-sm font-semibold tracking-tight text-neutral-800 dark:text-neutral-200">
+              Streamlyned
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle initialTheme={theme} initialColor={colorBg} />
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto bg-background p-4 md:p-8 pb-24 md:pb-8 min-w-0">
