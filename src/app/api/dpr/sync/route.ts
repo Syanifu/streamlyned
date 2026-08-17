@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import { postJournalEntry } from "@/lib/finance/ledger";
 import { enqueueEvent } from "@/lib/events/outbox";
 import { checkBudgetThreshold } from "@/lib/project/budget";
+import { assertPeriodOpen } from "@/lib/finance/period";
 
 export async function POST(request: Request) {
   try {
@@ -36,6 +37,9 @@ export async function POST(request: Request) {
     const totalProvisionalCost = labourCost + equipmentCost;
 
     const result = await db.$transaction(async (tx) => {
+      // Assert that the posting period is open for this DPR report date
+      await assertPeriodOpen(session.workspace.id, parsedDate, tx);
+
       // 1. Verify WBS nodes in quantity lines exist and check budget
       if (qtyLines && Array.isArray(qtyLines) && qtyLines.length > 0) {
         for (const line of qtyLines) {

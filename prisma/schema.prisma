@@ -76,6 +76,10 @@ model Workspace {
   purchaseOrders     PurchaseOrder[]
   inventoryMovements InventoryMovement[]
   dailyProgressReports DailyProgressReport[]
+  clientContracts    ClientContract[]
+  raBills            RaBill[]
+  purchaseInvoices   PurchaseInvoice[]
+  periodLocks        PeriodLock?
 }
 
 model WorkspaceMember {
@@ -121,6 +125,8 @@ model Project {
   materialRequests   MaterialRequest[]
   purchaseOrders     PurchaseOrder[]
   dailyProgressReports DailyProgressReport[]
+  clientContracts    ClientContract[]
+  raBills            RaBill[]
 }
 
 model ProjectMember {
@@ -739,6 +745,7 @@ model WbsNode {
   materialReqs     MaterialRequest[]
   inventoryMovements InventoryMovement[]
   dprQtyLines      DprQuantityLine[]
+  raBillItems      RaBillItem[]
 
   @@unique([projectId, code])
 }
@@ -864,4 +871,99 @@ model DprEquipmentLine {
   idleHours    Float
   ratePerHour  Float
   dpr          DailyProgressReport @relation(fields: [dprId], references: [id], onDelete: Cascade)
+}
+
+// --- Client Contract ---
+model ClientContract {
+  id                 String          @id @default(uuid())
+  workspaceId        String
+  projectId          String
+  contractNumber     String          // unique per workspace
+  customerCode       String
+  totalValue         Float           @default(0.0)
+  advanceAmount      Float           @default(0.0) // Mobilization advance paid
+  advanceRecoveryPct Float           @default(0.0) // percentage to recover per bill
+  retentionPct       Float           @default(0.0) // retention percentage
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  raBills            RaBill[]
+
+  @@unique([workspaceId, contractNumber])
+}
+
+// --- Running Account Client Bill ---
+model RaBill {
+  id                   String       @id @default(uuid())
+  workspaceId          String
+  projectId            String
+  contractId           String
+  billNumber           String       // unique per workspace/project e.g. "RA-01"
+  cumulativeClaimed    Float        @default(0.0)
+  cumulativeCertified  Float        @default(0.0)
+  retentionDeduction   Float        @default(0.0)
+  advanceRecovery      Float        @default(0.0)
+  netPayable           Float        @default(0.0)
+  status               String       @default("DRAFT") // DRAFT | SUBMITTED | CERTIFIED | PAID
+  billingDate          DateTime
+  certifiedAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  workspace            Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project              Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contract             ClientContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  items                RaBillItem[]
+
+  @@unique([projectId, billNumber])
+}
+
+model RaBillItem {
+  id              String   @id @default(uuid())
+  billId          String
+  wbsNodeId       String
+  claimedQty      Float
+  certifiedQty    Float
+  rate            Float
+  bill            RaBill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+  wbsNode         WbsNode  @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
+}
+
+// --- Purchase Invoice (for 3-Way Match) ---
+model PurchaseInvoice {
+  id             String                @id @default(uuid())
+  workspaceId    String
+  projectId      String
+  invoiceNumber  String
+  supplierCode   String
+  status         String                @default("PENDING") // PENDING | MATCHED | MISMATCHED | APPROVED
+  totalAmount    Float                 @default(0.0)
+  invoiceDate    DateTime
+  poId           String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  workspace      Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items          PurchaseInvoiceItem[]
+
+  @@unique([workspaceId, supplierCode, invoiceNumber])
+}
+
+model PurchaseInvoiceItem {
+  id           String          @id @default(uuid())
+  invoiceId    String
+  itemCode     String
+  quantity     Float
+  rate         Float
+  invoice      PurchaseInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// --- Period Lock Settings ---
+model PeriodLock {
+  id             String    @id @default(uuid())
+  workspaceId    String    @unique
+  lockDate       DateTime
+  lockedByUserId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }

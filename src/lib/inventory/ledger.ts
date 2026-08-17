@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { postJournalEntry } from "../finance/ledger";
 import { enqueueEvent } from "../events/outbox";
+import { assertPeriodOpen } from "../finance/period";
 
 export interface StockStatus {
   quantity: number;
@@ -70,6 +71,9 @@ export async function postGoodsReceiptNote(
   const client = tx || db;
 
   return await client.$transaction(async (transactionClient: any) => {
+    // Assert that the posting period is open
+    await assertPeriodOpen(workspaceId, new Date(), transactionClient);
+
     // 1. Verify PO exists and is approved
     const po = await transactionClient.purchaseOrder.findUnique({
       where: { id: poId },
@@ -162,6 +166,9 @@ export async function postMaterialIssue(
   const client = tx || db;
 
   return await client.$transaction(async (transactionClient: any) => {
+    // Assert that the posting period is open
+    await assertPeriodOpen(workspaceId, new Date(), transactionClient);
+
     const issueMovements = [];
     let totalIssueValue = 0;
 
