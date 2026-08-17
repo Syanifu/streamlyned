@@ -4,16 +4,16 @@ import React, { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { Mail, Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key"
+);
+
 export default function LandingForm() {
   const [email, setEmail] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key"
-  );
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

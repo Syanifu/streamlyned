@@ -37,6 +37,7 @@ model User {
   googleCalendarToken GoogleCalendarToken?
   sessions           Session[]
   connections        Connection[]
+  approvalSignoffs   ApprovalSignoff[]
 }
 
 model Workspace {
@@ -64,6 +65,17 @@ model Workspace {
   notionConnection NotionConnection?
   sessions         Session[]
   connections      Connection[]
+  outboxEvents       OutboxEvent[]
+  chartOfAccounts    ChartOfAccounts[]
+  generalLedgerEntries GeneralLedgerEntry[]
+  itemMasters        ItemMaster[]
+  supplierMasters    SupplierMaster[]
+  customerMasters    CustomerMaster[]
+  approvalRequests   ApprovalRequest[]
+  materialRequests   MaterialRequest[]
+  purchaseOrders     PurchaseOrder[]
+  inventoryMovements InventoryMovement[]
+  dailyProgressReports DailyProgressReport[]
 }
 
 model WorkspaceMember {
@@ -104,6 +116,11 @@ model Project {
   workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members          ProjectMember[]
   taskLists        TaskList[]
+  generalLedgerEntries GeneralLedgerEntry[]
+  wbsNodes           WbsNode[]
+  materialRequests   MaterialRequest[]
+  purchaseOrders     PurchaseOrder[]
+  dailyProgressReports DailyProgressReport[]
 }
 
 model ProjectMember {
@@ -557,4 +574,294 @@ model AuditEvent {
   ipHash       String?
   metadata     String?  // JSON
   createdAt    DateTime @default(now())
+}
+
+// --- Transactional Outbox Pattern ---
+model OutboxEvent {
+  id          String    @id @default(uuid())
+  workspaceId String
+  eventType   String    // e.g. "E03", "purchase_order.submitted"
+  payload     String    // JSON payload
+  status      String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  error       String?
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+}
+
+// --- Chart of Accounts (COA) ---
+model ChartOfAccounts {
+  id          String               @id @default(uuid())
+  workspaceId String
+  code        String               // e.g. "1000", "2000"
+  name        String
+  type        String               // ASSET | LIABILITY | EQUITY | REVENUE | EXPENSE
+  parentCode  String?
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ledgerEntries GeneralLedgerEntry[]
+
+  @@unique([workspaceId, code])
+}
+
+// --- General Ledger Entry ---
+model GeneralLedgerEntry {
+  id            String          @id @default(uuid())
+  workspaceId   String
+  projectId     String?
+  wbsCode       String?
+  coaCode       String
+  debit         Float           @default(0.0)
+  credit        Float           @default(0.0)
+  ledgerDate    DateTime
+  referenceType String          // e.g. "GRN", "INVOICE", "PAYROLL"
+  referenceId   String
+  description   String?
+  createdAt     DateTime        @default(now())
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project       Project?        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  coa           ChartOfAccounts @relation(fields: [workspaceId, coaCode], references: [workspaceId, code])
+
+  @@index([workspaceId, ledgerDate])
+  @@index([workspaceId, coaCode])
+}
+
+// --- Item Master ---
+model ItemMaster {
+  id          String    @id @default(uuid())
+  workspaceId String
+  code        String
+  name        String
+  description String?
+  uom         String    // KG | M | PCS etc.
+  group       String    // RAW_MATERIAL | CONSUMABLE | SERVICES
+  isActive    Boolean   @default(true)
+  costingRule String    @default("MOVING_AVERAGE")
+  hsnCode     String?
+  reorderLevel Float?
+  reorderQty   Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, code])
+}
+
+// --- Supplier Master ---
+model SupplierMaster {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  code         String
+  name         String
+  gstin        String?
+  email        String?
+  phone        String?
+  bankName     String?
+  bankAccount  String?
+  bankIfsc     String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, code])
+}
+
+// --- Customer Master ---
+model CustomerMaster {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  code         String
+  name         String
+  gstin        String?
+  creditLimit  Float?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, code])
+}
+
+// --- Approval Request & Signoffs ---
+model ApprovalRequest {
+  id           String             @id @default(uuid())
+  workspaceId  String
+  documentType String             // MR | PO | DPR
+  documentId   String
+  amount       Float              @default(0.0)
+  status       String             @default("PENDING") // PENDING | APPROVED | REJECTED
+  currentStep  Int                @default(1)
+  maxStep      Int                @default(1)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  signoffs     ApprovalSignoff[]
+
+  @@unique([workspaceId, documentType, documentId])
+}
+
+model ApprovalSignoff {
+  id             String          @id @default(uuid())
+  requestId      String
+  step           Int
+  approverUserId String
+  status         String          @default("PENDING") // PENDING | APPROVED | REJECTED
+  actionComment  String?
+  actedAt        DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  request        ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approver       User            @relation(fields: [approverUserId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, step, approverUserId])
+}
+
+// --- WBS Node & Budget Spine ---
+model WbsNode {
+  id               String               @id @default(uuid())
+  projectId        String
+  code             String               // e.g. "1.1.1", "1.2"
+  name             String
+  budgetLimit      Float                @default(0.0)
+  actualCost       Float                @default(0.0)
+  committedCost    Float                @default(0.0)
+  parentCode       String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  poItems          PurchaseOrderItem[]
+  materialReqs     MaterialRequest[]
+  inventoryMovements InventoryMovement[]
+  dprQtyLines      DprQuantityLine[]
+
+  @@unique([projectId, code])
+}
+
+// --- Material Request ---
+model MaterialRequest {
+  id            String                @id @default(uuid())
+  workspaceId   String
+  projectId     String
+  wbsNodeId     String?
+  requestNumber String                // unique per workspace
+  status        String                @default("PENDING") // PENDING | APPROVED | REJECTED | ORDERED
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  workspace     Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project       Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  wbsNode       WbsNode?              @relation(fields: [wbsNodeId], references: [id])
+  items         MaterialRequestItem[]
+
+  @@unique([workspaceId, requestNumber])
+}
+
+model MaterialRequestItem {
+  id           String          @id @default(uuid())
+  requestId    String
+  itemCode     String
+  quantity     Float
+  requiredDate DateTime?
+  request      MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+// --- Purchase Order ---
+model PurchaseOrder {
+  id            String              @id @default(uuid())
+  workspaceId   String
+  projectId     String
+  poNumber      String              // unique per workspace
+  supplierCode  String
+  status        String              @default("PENDING") // PENDING | APPROVED | REJECTED | CLOSED
+  totalAmount   Float               @default(0.0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project       Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items         PurchaseOrderItem[]
+
+  @@unique([workspaceId, poNumber])
+}
+
+model PurchaseOrderItem {
+  id         String        @id @default(uuid())
+  poId       String
+  itemCode   String
+  quantity   Float
+  rate       Float
+  wbsNodeId  String?
+  po         PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  wbsNode    WbsNode?      @relation(fields: [wbsNodeId], references: [id])
+}
+
+// --- Inventory Movement (Ledger) ---
+model InventoryMovement {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  type          String    // GRN | ISSUE | TRANSFER
+  itemCode      String
+  quantity      Float     // positive for receipt, negative for issue
+  rate          Float     // valuation rate at movement
+  referenceType String    // PO | DPR
+  referenceId   String
+  projectId     String?
+  wbsNodeId     String?
+  warehouse     String    @default("MAIN")
+  createdAt     DateTime  @default(now())
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  wbsNode       WbsNode?  @relation(fields: [wbsNodeId], references: [id])
+
+  @@index([workspaceId, itemCode, warehouse])
+}
+
+// --- Daily Progress Report ---
+model DailyProgressReport {
+  id               String               @id @default(uuid())
+  workspaceId      String
+  projectId        String
+  reportDate       DateTime
+  status           String               @default("DRAFT") // DRAFT | SUBMITTED | VERIFIED
+  reportedByUserId String
+  createdAt        DateTime             @default(now())
+  workspace        Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  qtyLines         DprQuantityLine[]
+  labourLines      DprLabourLine[]
+  equipmentLines   DprEquipmentLine[]
+
+  @@unique([projectId, reportDate])
+}
+
+model DprQuantityLine {
+  id        String              @id @default(uuid())
+  dprId     String
+  wbsNodeId String
+  quantity  Float
+  dpr       DailyProgressReport @relation(fields: [dprId], references: [id], onDelete: Cascade)
+  wbsNode   WbsNode             @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
+}
+
+model DprLabourLine {
+  id          String              @id @default(uuid())
+  dprId       String
+  trade       String              // MASON | WELDER | HELPER
+  headcount   Int
+  hours       Float
+  ratePerHour Float
+  dpr         DailyProgressReport @relation(fields: [dprId], references: [id], onDelete: Cascade)
+}
+
+model DprEquipmentLine {
+  id           String              @id @default(uuid())
+  dprId        String
+  equipmentCode String
+  runningHours Float
+  idleHours    Float
+  ratePerHour  Float
+  dpr          DailyProgressReport @relation(fields: [dprId], references: [id], onDelete: Cascade)
 }
