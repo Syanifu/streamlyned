@@ -20,7 +20,6 @@ import {
   Download,
 } from "lucide-react";
 import ThemeToggle from "./theme-toggle";
-import BionicToggle from "./bionic-toggle";
 
 interface DmChatInfo {
   dmGroupId: string;
@@ -224,9 +223,7 @@ export default function NavigationSidebar({
 
         {/* Sidebar Footer / User Profile & Controls */}
         <div className="p-3 border-t border-border-custom shrink-0 space-y-3 bg-neutral-50/50 dark:bg-neutral-900/20">
-          {/* Controls row */}
-          <div className={`flex items-center gap-2 justify-center ${isCollapsed ? "flex-col" : "flex-row"}`}>
-            <BionicToggle />
+          <div className={`flex items-center gap-2 justify-center`}>
             <ThemeToggle initialTheme={theme} initialColor={colorBg} />
           </div>
 
