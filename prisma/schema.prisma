@@ -85,6 +85,9 @@ model Workspace {
   drawingTransmittals DrawingTransmittal[]
   itpInspectionRequests ItpInspectionRequest[]
   nonConformanceReports NonConformanceReport[]
+  commissioningSystems  CommissioningSystem[]
+  assetTags             AssetTag[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
 }
 
 model WorkspaceMember {
@@ -134,6 +137,9 @@ model Project {
   raBills            RaBill[]
   drawingDocuments   DrawingDocument[]
   drawingTransmittals DrawingTransmittal[]
+  commissioningSystems CommissioningSystem[]
+  assetTags            AssetTag[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
 }
 
 model ProjectMember {
@@ -756,6 +762,9 @@ model WbsNode {
   workPackages     WbsWorkPackage[]
   inspectionRequests ItpInspectionRequest[]
   ncrReports       NonConformanceReport[]
+  commissioningLoops CommissioningLoop[]
+  assetTags          AssetTag[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
 
   @@unique([projectId, code])
 }
@@ -1093,4 +1102,80 @@ model NonConformanceReport {
   wbsNode             WbsNode              @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, ncrNumber])
+}
+
+// --- Commissioning & Handovers ---
+model CommissioningSystem {
+  id               String               @id @default(uuid())
+  workspaceId      String
+  projectId        String
+  systemCode       String               // e.g. "SYS-HVAC-01"
+  name             String
+  status           String               @default("PENDING") // PENDING | TESTING | COMMISSIONED
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  workspace        Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  loops            CommissioningLoop[]
+
+  @@unique([projectId, systemCode])
+}
+
+model CommissioningLoop {
+  id               String               @id @default(uuid())
+  systemId         String
+  wbsNodeId        String
+  loopTag          String               // e.g. "LP-CHW-101"
+  status           String               @default("PENDING") // PENDING | PASSED | FAILED
+  checklistResults String               // JSON checklist state
+  inspectedAt      DateTime?
+  inspectedBy      String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  system           CommissioningSystem  @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  wbsNode          WbsNode              @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([systemId, loopTag])
+}
+
+// --- Handover & Asset Tags ---
+model AssetTag {
+  id               String                 @id @default(uuid())
+  workspaceId      String
+  projectId        String
+  wbsNodeId        String?
+  assetCode        String                 // e.g. "AST-PUMP-001"
+  name             String
+  status           String                 // OPERATIONAL | MAINTENANCE | SHUTDOWN
+  commissionedAt   DateTime               @default(now())
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  workspace        Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project          Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  wbsNode          WbsNode?               @relation(fields: [wbsNodeId], references: [id])
+  workOrders       MaintenanceWorkOrder[]
+
+  @@unique([workspaceId, assetCode])
+}
+
+// --- Maintenance & Operations ---
+model MaintenanceWorkOrder {
+  id               String                 @id @default(uuid())
+  workspaceId      String
+  projectId        String
+  wbsNodeId        String?
+  assetId          String
+  woNumber         String                 // e.g. "WO-2026-001"
+  title            String
+  description      String
+  status           String                 @default("OPEN") // OPEN | IN_PROGRESS | COMPLETED | CLOSED
+  sparesConsumed   String?                // JSON spares list consumed e.g. [{"itemCode": "BOLT", "qty": 10}]
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  workspace        Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project          Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  wbsNode          WbsNode?               @relation(fields: [wbsNodeId], references: [id])
+  asset            AssetTag               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, woNumber])
 }

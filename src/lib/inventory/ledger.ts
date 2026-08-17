@@ -3,6 +3,21 @@ import { postJournalEntry } from "../finance/ledger";
 import { enqueueEvent } from "../events/outbox";
 import { assertPeriodOpen } from "../finance/period";
 
+/**
+ * Runs operations inside a transaction if tx is not a transaction client,
+ * otherwise executes directly on the provided transaction client.
+ */
+async function runInTransaction<T>(
+  tx: any,
+  operation: (transactionClient: any) => Promise<T>
+): Promise<T> {
+  if (tx && typeof tx.$transaction !== "function") {
+    return await operation(tx);
+  }
+  const client = tx || db;
+  return await client.$transaction(operation, { timeout: 15000 });
+}
+
 export interface StockStatus {
   quantity: number;
   rate: number;
@@ -70,7 +85,7 @@ export async function postGoodsReceiptNote(
 ) {
   const client = tx || db;
 
-  return await client.$transaction(async (transactionClient: any) => {
+  return await runInTransaction(tx, async (transactionClient: any) => {
     // Assert that the posting period is open
     await assertPeriodOpen(workspaceId, new Date(), transactionClient);
 
@@ -144,7 +159,7 @@ export async function postGoodsReceiptNote(
     );
 
     return { success: true, movements: grnMovements };
-  }, { timeout: 10000 }); // setting transaction timeout
+  });
 }
 
 export interface IssueLineInput {
@@ -165,7 +180,7 @@ export async function postMaterialIssue(
 ) {
   const client = tx || db;
 
-  return await client.$transaction(async (transactionClient: any) => {
+  return await runInTransaction(tx, async (transactionClient: any) => {
     // Assert that the posting period is open
     await assertPeriodOpen(workspaceId, new Date(), transactionClient);
 
