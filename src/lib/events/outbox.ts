@@ -50,6 +50,9 @@ export async function processOutbox(batchSize = 10) {
     take: batchSize,
   });
 
+  console.log(`  [processOutbox] Queried events from DB in outbox.ts:`, events.map(e => ({ id: e.id, type: e.eventType, status: e.status })));
+  console.log(`  [processOutbox] Registered handler keys:`, Object.keys(registry));
+
   if (events.length === 0) {
     return { processed: 0 };
   }
@@ -57,6 +60,7 @@ export async function processOutbox(batchSize = 10) {
   let processedCount = 0;
 
   for (const event of events) {
+    console.log(`    [processOutbox] Loop processing event ${event.id} of type ${event.eventType}`);
     // 1. Mark event as PROCESSING and increment attempts
     await db.outboxEvent.update({
       where: { id: event.id },

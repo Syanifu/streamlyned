@@ -2,6 +2,7 @@ import { db } from "../db";
 import { postJournalEntry } from "../finance/ledger";
 import { enqueueEvent } from "../events/outbox";
 import { calculateAdvanceRecovery } from "./contract";
+import { assertNoOpenNcr } from "../qc/inspections";
 
 export interface RaBillItemInput {
   wbsNodeId: string;
@@ -31,6 +32,11 @@ export async function createDraftRaBill(
 
     if (!contract || contract.projectId !== projectId) {
       throw new Error(`Client Contract ${contractId} not found or mismatch for Project ${projectId}.`);
+    }
+
+    // Validate that no items are blocked by an active Non-Conformance Report (NCR)
+    for (const item of items) {
+      await assertNoOpenNcr(item.wbsNodeId, transactionClient);
     }
 
     // 2. Compute cumulative claimed value

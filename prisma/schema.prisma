@@ -38,6 +38,7 @@ model User {
   sessions           Session[]
   connections        Connection[]
   approvalSignoffs   ApprovalSignoff[]
+  inspectionRequests ItpInspectionRequest[]
 }
 
 model Workspace {
@@ -80,6 +81,10 @@ model Workspace {
   raBills            RaBill[]
   purchaseInvoices   PurchaseInvoice[]
   periodLocks        PeriodLock?
+  drawingDocuments   DrawingDocument[]
+  drawingTransmittals DrawingTransmittal[]
+  itpInspectionRequests ItpInspectionRequest[]
+  nonConformanceReports NonConformanceReport[]
 }
 
 model WorkspaceMember {
@@ -127,6 +132,8 @@ model Project {
   dailyProgressReports DailyProgressReport[]
   clientContracts    ClientContract[]
   raBills            RaBill[]
+  drawingDocuments   DrawingDocument[]
+  drawingTransmittals DrawingTransmittal[]
 }
 
 model ProjectMember {
@@ -746,6 +753,9 @@ model WbsNode {
   inventoryMovements InventoryMovement[]
   dprQtyLines      DprQuantityLine[]
   raBillItems      RaBillItem[]
+  workPackages     WbsWorkPackage[]
+  inspectionRequests ItpInspectionRequest[]
+  ncrReports       NonConformanceReport[]
 
   @@unique([projectId, code])
 }
@@ -966,4 +976,121 @@ model PeriodLock {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// --- Engineering Drawing Document ---
+model DrawingDocument {
+  id             String            @id @default(uuid())
+  workspaceId    String
+  projectId      String
+  drawingNumber  String            // e.g. "METRO-STR-101"
+  title          String
+  discipline     String            // STRUCTURAL | ELECTRICAL | MECHANICAL | CIVIL
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  workspace      Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions      DrawingRevision[]
+
+  @@unique([projectId, drawingNumber])
+}
+
+// --- Drawing Revision ---
+model DrawingRevision {
+  id             String             @id @default(uuid())
+  drawingId      String
+  revisionNumber String             // e.g. "R0", "R1"
+  status         String             @default("DRAFT") // DRAFT | APPROVED | IFC
+  fileUrl        String
+  fileSize       Int
+  releasedAt     DateTime?
+  isSuperseded   Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  drawing        DrawingDocument    @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  transmittals   TransmittalItem[]
+  workPackages   WbsWorkPackage[]
+  inspections    ItpInspectionRequest[]
+
+  @@unique([drawingId, revisionNumber])
+}
+
+// --- Drawing Transmittal ---
+model DrawingTransmittal {
+  id                String            @id @default(uuid())
+  workspaceId       String
+  projectId         String
+  transmittalNumber String            // unique per workspace
+  recipientEmail    String
+  sentAt            DateTime          @default(now())
+  receivedAt        DateTime?
+  createdAt         DateTime          @default(now())
+  workspace         Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items             TransmittalItem[]
+
+  @@unique([workspaceId, transmittalNumber])
+}
+
+model TransmittalItem {
+  id            String             @id @default(uuid())
+  transmittalId String
+  revisionId    String
+  transmittal   DrawingTransmittal @relation(fields: [transmittalId], references: [id], onDelete: Cascade)
+  revision      DrawingRevision    @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@unique([transmittalId, revisionId])
+}
+
+// --- WBS Node Work Package mapping ---
+model WbsWorkPackage {
+  id                String          @id @default(uuid())
+  wbsNodeId         String
+  drawingRevisionId String
+  status            String          @default("ACTIVE") // ACTIVE | HOLD | COMPLETED
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  wbsNode           WbsNode         @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
+  drawingRevision   DrawingRevision @relation(fields: [drawingRevisionId], references: [id], onDelete: Cascade)
+
+  @@unique([wbsNodeId, drawingRevisionId])
+}
+
+// --- Quality: ITP Inspection Request ---
+model ItpInspectionRequest {
+  id                String                @id @default(uuid())
+  workspaceId       String
+  wbsNodeId         String
+  drawingRevisionId String?
+  inspectorUserId   String
+  status            String                @default("PENDING") // PENDING | PASSED | FAILED
+  resultComment     String?
+  inspectedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  workspace         Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  wbsNode           WbsNode               @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
+  drawingRevision   DrawingRevision?      @relation(fields: [drawingRevisionId], references: [id])
+  inspector         User                  @relation(fields: [inspectorUserId], references: [id], onDelete: Cascade)
+  ncr               NonConformanceReport?
+}
+
+// --- Quality: Non-Conformance Report (NCR) ---
+model NonConformanceReport {
+  id                  String               @id @default(uuid())
+  workspaceId         String
+  inspectionRequestId String               @unique
+  ncrNumber           String               // unique per workspace
+  wbsNodeId           String
+  description         String
+  severity            String               @default("MINOR") // MINOR | MAJOR
+  status              String               @default("OPEN") // OPEN | RESOLVED | CLOSED
+  disposition         String?              // REWORK | USE_AS_IS | REJECT
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inspectionRequest   ItpInspectionRequest @relation(fields: [inspectionRequestId], references: [id], onDelete: Cascade)
+  wbsNode             WbsNode              @relation(fields: [wbsNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, ncrNumber])
 }
