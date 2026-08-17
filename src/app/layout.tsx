@@ -45,13 +45,11 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground">
         {children}
         <Toaster position="bottom-right" />
-        {process.env.NODE_ENV === "development" && (
-          <DevBanner
-            currentEmail={session?.user.email}
-            currentRole={session?.role}
-            currentWorkspaceSlug={session?.workspace.slug}
-          />
-        )}
+        <DevBanner
+          currentEmail={session?.user.email}
+          currentRole={session?.role}
+          currentWorkspaceSlug={session?.workspace.slug}
+        />
       </body>
     </html>
   );

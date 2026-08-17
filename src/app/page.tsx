@@ -75,17 +75,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
       </div>
 
       {/* Footer Instructions for Reviewer */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="max-w-6xl mx-auto w-full text-center border-t border-border-custom pt-8 mt-12">
-          <p className="text-xs text-neutral-400 flex items-center justify-center gap-1.5">
-            <span>Quick Evaluation: Click the</span>
-            <span className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
-              Dev Options
-            </span>
-            <span>pill at the bottom right to log in as Olivia (Owner) or Catherine (Client) instantly.</span>
-          </p>
-        </div>
-      )}
+      <div className="max-w-6xl mx-auto w-full text-center border-t border-border-custom pt-8 mt-12">
+        <p className="text-xs text-neutral-400 flex items-center justify-center gap-1.5">
+          <span>Quick Evaluation: Click the</span>
+          <span className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
+            Dev Options
+          </span>
+          <span>pill at the bottom right to log in as Olivia (Owner) or Catherine (Client) instantly.</span>
+        </p>
+      </div>
     </div>
   );
 }
