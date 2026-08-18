@@ -18,6 +18,8 @@ import {
   LineChart,
   Sparkles,
   Download,
+  Database,
+  Coins,
 } from "lucide-react";
 
 
@@ -119,6 +121,27 @@ export default function NavigationSidebar({
       icon: <CalendarIcon size={16} />,
       exact: true,
       visible: true,
+    },
+    {
+      href: "/dashboard/inventory",
+      label: "Inventory",
+      icon: <Database size={16} />,
+      exact: false,
+      visible: !isClient,
+    },
+    {
+      href: "/dashboard/accounts",
+      label: "Accounts",
+      icon: <Coins size={16} />,
+      exact: false,
+      visible: !isClient,
+    },
+    {
+      href: "/dashboard/payroll",
+      label: "Payroll",
+      icon: <User size={16} />,
+      exact: false,
+      visible: !isClient,
     },
     {
       href: "/dashboard/dm",

@@ -88,6 +88,8 @@ model Workspace {
   commissioningSystems  CommissioningSystem[]
   assetTags             AssetTag[]
   maintenanceWorkOrders MaintenanceWorkOrder[]
+  employees             Employee[]
+  salarySlips           SalarySlip[]
 }
 
 model WorkspaceMember {
@@ -1178,4 +1180,38 @@ model MaintenanceWorkOrder {
   asset            AssetTag               @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, woNumber])
+}
+
+// --- HR & Payroll ---
+model Employee {
+  id              String       @id @default(uuid())
+  workspaceId     String
+  name            String
+  email           String
+  designation     String
+  costRatePerHour Float        @default(0.0)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  salarySlips     SalarySlip[]
+
+  @@unique([workspaceId, email])
+}
+
+model SalarySlip {
+  id                  String    @id @default(uuid())
+  workspaceId         String
+  employeeId          String
+  month               String    // e.g. "2026-08"
+  basicSalary         Float     @default(0.0)
+  statutoryDeductions Float     @default(0.0) // PF + ESI
+  netPaid             Float     @default(0.0)
+  status              String    @default("DRAFT") // DRAFT | SUBMITTED | PAID
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employee            Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month])
 }
