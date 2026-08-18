@@ -39,6 +39,7 @@ model User {
   connections        Connection[]
   approvalSignoffs   ApprovalSignoff[]
   inspectionRequests ItpInspectionRequest[]
+  tagAuditLogs       TagAuditLog[]
 }
 
 model Workspace {
@@ -91,6 +92,10 @@ model Workspace {
   employees             Employee[]
   salarySlips           SalarySlip[]
   tags                  Tag[]
+  tagTypes              TagType[]
+  tagRelationships      TagRelationship[]
+  tagAllowedRelations   TagAllowedRelation[]
+  tagAuditLogs          TagAuditLog[]
 }
 
 model WorkspaceMember {
@@ -1217,16 +1222,87 @@ model SalarySlip {
   @@unique([employeeId, month])
 }
 
-// --- Centralized Tagging System ---
-model Tag {
-  id          String   @id @default(uuid())
-  workspaceId String
-  entityType  String   // PROJECT | ITEM | EMPLOYEE | SUPPLIER | CUSTOMER | COA | GL
-  entityId    String   // The ID of the respective record
-  code        String   // The code of the record (e.g. CEMENT-53G, PRJ-101)
-  label       String   // The tag string (e.g. "Critical", "Phase-1")
-  createdAt   DateTime @default(now())
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+// --- Hierarchical & Extensible Tagging System ---
 
-  @@unique([workspaceId, entityType, entityId, label])
+model TagType {
+  id               String                 @id @default(uuid())
+  workspaceId      String
+  name             String                 // e.g. "Cost Code"
+  description      String?
+  isSystem         Boolean                @default(false)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  workspace        Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tags             Tag[]
+  allowedAsSource  TagAllowedRelation[]   @relation("SourceType")
+  allowedAsTarget  TagAllowedRelation[]   @relation("TargetType")
+
+  @@unique([workspaceId, name])
+}
+
+model Tag {
+  id              String             @id @default(uuid())
+  workspaceId     String
+  tagTypeId       String
+  code            String             // Stable, unique short-code (e.g., "CIV-001")
+  name            String             // Human-readable descriptor
+  description     String?
+  parentTagId     String?
+  status          String             @default("ACTIVE") // ACTIVE | INACTIVE
+  entityType      String?            // "PROJECT" | "WBS" | "ITEM" | "EMPLOYEE" | "SUPPLIER" | "CUSTOMER" | "COA" | "GL"
+  entityId        String?            // Maps to the unique UUID of the domain model
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdById     String?
+  updatedById     String?
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tagType         TagType            @relation(fields: [tagTypeId], references: [id], onDelete: Cascade)
+  parentTag       Tag?               @relation("TagHierarchy", fields: [parentTagId], references: [id], onDelete: SetNull)
+  childTags       Tag[]              @relation("TagHierarchy")
+  sourceRelations TagRelationship[]  @relation("SourceTag")
+  targetRelations TagRelationship[]  @relation("TargetTag")
+
+  @@unique([workspaceId, tagTypeId, code])
+}
+
+model TagRelationship {
+  id               String         @id @default(uuid())
+  workspaceId      String
+  sourceTagId      String
+  targetTagId      String
+  relationshipType String         // e.g. "HAS_WBS", "USES_COST_CODE", "LOCATED_AT"
+  createdAt        DateTime       @default(now())
+  workspace        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceTag        Tag            @relation("SourceTag", fields: [sourceTagId], references: [id], onDelete: Cascade)
+  targetTag        Tag            @relation("TargetTag", fields: [targetTagId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, sourceTagId, targetTagId, relationshipType])
+}
+
+model TagAllowedRelation {
+  id               String   @id @default(uuid())
+  workspaceId      String
+  sourceTypeId     String
+  targetTypeId     String
+  relationshipType String
+  createdAt        DateTime @default(now())
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceType       TagType  @relation("SourceType", fields: [sourceTypeId], references: [id], onDelete: Cascade)
+  targetType       TagType  @relation("TargetType", fields: [targetTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, sourceTypeId, targetTypeId, relationshipType])
+}
+
+model TagAuditLog {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  action      String    // CREATED | UPDATED | DEACTIVATED | RELATION_ADDED | RELATION_REMOVED
+  entityType  String    // "TAG_TYPE" | "TAG" | "RELATIONSHIP"
+  entityId    String
+  oldValue    String?   // JSON snapshot
+  newValue    String?   // JSON snapshot
+  timestamp   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
