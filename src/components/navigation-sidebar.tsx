@@ -182,7 +182,7 @@ export default function NavigationSidebar({
     },
     {
       href: "/dashboard/import",
-      label: "Integrations",
+      label: "Data & Integration",
       icon: <LinkIcon size={16} />,
       exact: true,
       visible: !isClient && (role === "OWNER" || role === "ADMIN"),

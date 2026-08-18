@@ -60,7 +60,7 @@ export default async function ImportPage() {
       <div className="max-w-2xl mx-auto px-4 py-10 sm:py-16">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-            Workspace Integrations &amp; Imports
+            Workspace Data &amp; Integration
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Bring your project spaces, team collaboration tasks, or accounts ledger information from Basecamp, QuickBooks, and Tally ERP directly into Streamlyned.
