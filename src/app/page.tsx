@@ -17,34 +17,37 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   return (
     <div className="flex-1 flex flex-col justify-between bg-[#FAF6F0] dark:bg-[#121413] text-[#3c3e3c] dark:text-[#ebdccb] font-sans px-4 md:px-8 py-6 md:py-16 relative overflow-hidden min-h-screen">
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes breath {
-          0%, 100% { transform: scale(1.01); }
-          50% { transform: scale(1.04); }
+        @keyframes bgBreath {
+          0%, 100% { transform: scale(1.02); }
+          50% { transform: scale(1.08); }
         }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-breath {
-          animation: breath 4s ease-in-out infinite;
+        .animate-bg-breath {
+          animation: bgBreath 24s ease-in-out infinite;
         }
         .animate-fade-up {
           animation: fadeUp 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
           opacity: 0;
         }
-        .ken-burns-hover {
-          transition: transform 12s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .ken-burns-hover:hover {
-          transform: scale(1.08) translate(0.5%, 0.5%);
-        }
       `}} />
 
+      {/* Full screen background image with slow zoom */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src="/landing-image.svg"
+          alt="Background constructions abstract"
+          className="w-full h-full object-cover opacity-[0.08] dark:opacity-[0.04] animate-bg-breath transform origin-center"
+        />
+      </div>
+
       {/* Subtle paper texture overlay */}
-      <div className="absolute inset-0 opacity-[0.035] pointer-events-none mix-blend-overlay" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")" }} />
+      <div className="absolute inset-0 opacity-[0.035] pointer-events-none mix-blend-overlay z-0" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")" }} />
 
       {/* Diagonal golden sunbeam casting warm morning light */}
-      <div className="absolute top-0 right-0 w-[70%] h-[140%] bg-gradient-to-tr from-transparent via-[#FFFDFB]/10 to-[#F6DEB2]/15 rotate-12 -translate-y-[15%] pointer-events-none mix-blend-screen dark:mix-blend-overlay" />
+      <div className="absolute top-0 right-0 w-[70%] h-[140%] bg-gradient-to-tr from-transparent via-[#FFFDFB]/10 to-[#F6DEB2]/15 rotate-12 -translate-y-[15%] pointer-events-none mix-blend-screen dark:mix-blend-overlay z-0" />
 
       {/* Top-left wordmark */}
       <div className="max-w-6xl mx-auto w-full flex items-center gap-2 mb-8 md:mb-14 relative z-10">
@@ -69,19 +72,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           <h1 className="text-3xl md:text-5xl font-serif font-medium tracking-tight text-[#2e312f] dark:text-[#f7f4f0] leading-[1.15]">
             Consolidate work.<br />Eliminate noise.
           </h1>
-
-          {/* Hero Visual Image (Factories Constructions Abstract) */}
-          <div className="relative rounded-2xl overflow-hidden border border-[#ebdccb]/60 dark:border-neutral-800 bg-[#f5ebe0]/30 dark:bg-neutral-900/35 p-1.5 shadow-md shadow-[#ebdccb]/20 dark:shadow-none group">
-            <div className="relative h-44 md:h-52 w-full overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-950">
-              <img
-                src="/landing-image.svg"
-                alt="Factories constructions abstract"
-                className="w-full h-full object-cover ken-burns-hover animate-breath"
-              />
-              {/* Warm morning light mask */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#FAF6F0]/20 via-transparent to-transparent pointer-events-none" />
-            </div>
-          </div>
 
           <p className="text-base text-[#4c504d] dark:text-[#c4bdb4] leading-[1.7] font-sans">
             Streamlyned is an AI-native project management platform designed specifically for small teams &amp; solo founders. By replacing scattered channels with unified workspaces &amp; reduce daily cognitive load.
