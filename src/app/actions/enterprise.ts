@@ -16,6 +16,16 @@ import { calculateProjectEVM, checkLowInventory } from "@/lib/analytics/engine";
 
 // Helper to assert member access
 async function verifyProjectMember(projectId: string, userId: string) {
+  const workspaceMember = await db.workspaceMember.findFirst({
+    where: {
+      userId,
+      role: { in: ["OWNER", "ADMIN"] },
+    },
+  });
+  if (workspaceMember) {
+    return;
+  }
+
   const member = await db.projectMember.findUnique({
     where: { projectId_userId: { projectId, userId } },
   });

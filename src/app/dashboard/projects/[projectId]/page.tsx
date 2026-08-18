@@ -76,18 +76,17 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
   // 2. Fetch current user's membership and allowed tools (enforce revocation check)
   const currentMember = project.members.find((m) => m.userId === session.user.id);
-  if (!currentMember) {
+  const isAdminOrOwner = session.role === "OWNER" || session.role === "ADMIN";
+  if (!currentMember && !isAdminOrOwner) {
     redirect("/dashboard");
   }
 
   const parsedTools = JSON.parse(project.tools) as string[];
   const enabledProjectTools = parsedTools.filter((t) => t !== "checkins");
   const extraTools = ["inventory", "billing", "drawings", "analytics"];
-  const allowedTools = session.role === "CLIENT"
+  const allowedTools = (session.role === "CLIENT" && currentMember)
     ? (JSON.parse(currentMember.visibleTools) as string[]).filter(t => enabledProjectTools.includes(t))
     : [...enabledProjectTools, ...extraTools];
-
-  const isAdminOrOwner = session.role === "OWNER" || session.role === "ADMIN";
 
   // 3. Security Check: If user manually changes URL to access forbidden tab, block them
   // "settings" tab is always allowed for OWNER/ADMIN

@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getTodayViewData } from "@/lib/today-rules";
 import TodayView from "@/components/today-view";
+import EnterpriseDashboard from "@/components/enterprise-dashboard";
+import { getWorkspaceDashboardStats } from "@/app/actions/dashboard";
 import { db } from "@/lib/db";
 
 export default async function DashboardTodayPage() {
@@ -166,6 +168,15 @@ export default async function DashboardTodayPage() {
     ...n,
     createdAt: n.createdAt.toISOString(),
   }));
+
+  const isPowerUser = session.role === "OWNER" || session.role === "ADMIN";
+
+  if (isPowerUser) {
+    const statsResult = await getWorkspaceDashboardStats();
+    if (statsResult.success && statsResult.stats) {
+      return <EnterpriseDashboard stats={statsResult.stats} />;
+    }
+  }
 
   return (
     <TodayView
