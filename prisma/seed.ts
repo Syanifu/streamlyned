@@ -12,7 +12,7 @@ async function main() {
   // 1. Create Users
   const owner = await prisma.user.create({
     data: {
-      email: "syedirfanmicheal@gmail.com",
+      email: "owner@streamlyned.com",
       name: "Syed Irfan, owner",
       avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=syed",
       planTier: "premium+",

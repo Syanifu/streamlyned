@@ -22,7 +22,7 @@ export default function DevBanner({
   const [error, setError] = useState<string | null>(null);
 
   const testUsers = [
-    { name: "Syed Irfan, owner", email: "syedirfanmicheal@gmail.com", role: "OWNER" },
+    { name: "Syed Irfan, owner", email: "owner@streamlyned.com", role: "OWNER" },
     { name: "Test-1", email: "superadmin@streamlyned.com", role: "SUPER_ADMIN" },
     { name: "Test-2", email: "admin@streamlyned.com", role: "ADMIN" },
     { name: "Test-3", email: "member@streamlyned.com", role: "MEMBER" },

@@ -23,7 +23,7 @@ async function runAdversarialTests() {
 
   try {
     // 1. Fetch seed users and workspace
-    const owner = await prisma.user.findFirst({ where: { email: "syedirfanmicheal@gmail.com" } });
+    const owner = await prisma.user.findFirst({ where: { email: "owner@streamlyned.com" } });
     const client = await prisma.user.findFirst({ where: { email: "client@streamlyned.com" } });
     const workspace = await prisma.workspace.findUnique({ where: { slug: "acme-agency" } });
     const project1 = await prisma.project.findFirst({ where: { name: "Website Redesign" } });
