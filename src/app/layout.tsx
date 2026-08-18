@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Lora } from "next/font/google";
+import { DM_Sans, Orbitron, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import DevBanner from "@/components/dev-banner";
 import { getSession } from "@/lib/auth";
@@ -14,8 +14,15 @@ const dmSans = DM_Sans({
   weight: ["300", "400", "500", "600", "700"],
 });
 
-const lora = Lora({
-  variable: "--font-lora",
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700"],
@@ -46,7 +53,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${theme === "dark" ? "dark" : ""} ${dmSans.variable} ${lora.variable} h-full antialiased`}
+      className={`${theme === "dark" ? "dark" : ""} ${dmSans.variable} ${orbitron.variable} ${ibmPlexMono.variable} h-full antialiased`}
       {...(colorBg ? { "data-bg": colorBg } : {})}
     >
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground">
