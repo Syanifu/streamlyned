@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (.dark &);
+
 :root {
   --background: #FAFAF7; /* Basecamp warm canvas background */
   --foreground: #000000; /* Pure black text */
