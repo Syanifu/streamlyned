@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-export interface TaggedEntity {
+interface TaggedEntity {
   id: string;
   entityType: "PROJECT" | "WBS" | "ITEM" | "EMPLOYEE" | "SUPPLIER" | "CUSTOMER" | "COA" | "GL";
   code: string;
@@ -14,7 +14,7 @@ export interface TaggedEntity {
 }
 
 // System Tag Types Names
-export const SYSTEM_TAG_TYPES = {
+const SYSTEM_TAG_TYPES = {
   ACCOUNT: "Account / Organization",
   PROJECT: "Project",
   WBS: "WBS / Work Package",
