@@ -22,11 +22,11 @@ export default function DevBanner({
   const [error, setError] = useState<string | null>(null);
 
   const testUsers = [
-    { name: "Olivia Owner", email: "owner@streamlyned.com", role: "OWNER" },
-    { name: "Sarah SuperAdmin", email: "superadmin@streamlyned.com", role: "SUPER_ADMIN" },
-    { name: "Alex Admin", email: "admin@streamlyned.com", role: "ADMIN" },
-    { name: "Marcus Member", email: "member@streamlyned.com", role: "MEMBER" },
-    { name: "Catherine Client", email: "client@streamlyned.com", role: "CLIENT" },
+    { name: "Syed Irfan, owner", email: "owner@streamlyned.com", role: "OWNER" },
+    { name: "Test-1", email: "superadmin@streamlyned.com", role: "SUPER_ADMIN" },
+    { name: "Test-2", email: "admin@streamlyned.com", role: "ADMIN" },
+    { name: "Test-3", email: "member@streamlyned.com", role: "MEMBER" },
+    { name: "Test-4", email: "client@streamlyned.com", role: "CLIENT" },
   ];
 
   const handleSwitch = async (email: string, slug: string) => {

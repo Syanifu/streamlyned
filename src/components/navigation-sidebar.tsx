@@ -206,9 +206,14 @@ export default function NavigationSidebar({
         {/* Sidebar Header / Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-border-custom shrink-0">
           {!isCollapsed && (
-            <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200 tracking-tight pl-2">
-              Streamlyned
-            </span>
+            <div className="flex flex-col pl-2">
+              <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200 tracking-tight leading-tight">
+                Streamlyned
+              </span>
+              <span className="text-[8px] text-neutral-400 dark:text-neutral-500 font-medium">
+                developed by Scaling Dynamics
+              </span>
+            </div>
           )}
           {isCollapsed && (
             <span className="w-8 h-8 rounded-xl bg-neutral-900 dark:bg-white flex items-center justify-center text-white dark:text-neutral-900 font-extrabold text-sm ml-2">

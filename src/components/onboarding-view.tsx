@@ -70,9 +70,14 @@ export default function OnboardingView({ memberships, userEmail, userName }: Onb
       <div className="text-center space-y-1">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Sparkles size={18} className="text-neutral-600" />
-          <span className="text-sm font-bold text-neutral-800 dark:text-neutral-100 tracking-tight">
-            Streamlyned
-          </span>
+          <div className="flex flex-col text-left">
+            <span className="text-sm font-bold text-neutral-800 dark:text-neutral-100 tracking-tight leading-none">
+              Streamlyned
+            </span>
+            <span className="text-[7px] text-neutral-400 dark:text-neutral-500 font-medium mt-0.5">
+              developed by Scaling Dynamics
+            </span>
+          </div>
         </div>
         <h1 className="text-xl font-bold text-neutral-800 dark:text-neutral-100">
           Welcome, {userName.split(" ")[0]}

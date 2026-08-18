@@ -17,9 +17,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   return (
     <div className="flex-1 flex flex-col justify-between bg-background px-4 md:px-6 py-6 md:py-16">
       {/* Top-left wordmark */}
-      <div className="max-w-6xl mx-auto w-full flex items-center mb-8 md:mb-10">
+      <div className="max-w-6xl mx-auto w-full flex items-center gap-2 mb-8 md:mb-10">
         <span className="text-base font-semibold text-neutral-800 dark:text-neutral-200 tracking-tight">
           Streamlyned
+        </span>
+        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">
+          developed by Scaling Dynamics
         </span>
       </div>
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-8 items-center flex-1">
@@ -56,17 +59,23 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
             <div className="flex gap-3">
               <span className="text-brand-success font-medium text-sm">✓</span>
               <div>
-                <h4 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Unlimited client collaboration</h4>
-                <p className="text-xs text-neutral-600 mt-0.5">Flat billing models with zero seat fees for client spaces.</p>
+                <h4 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 font-sans">Human in command</h4>
+                <p className="text-xs text-neutral-600 mt-0.5">Your data, completely private. You choose what to index and control how it responds.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Setup form */}
-        <div className="md:col-span-5 flex flex-col items-center md:items-end justify-center">
+        {/* Right Side: Authentication */}
+        <div className="md:col-span-5 w-full bg-surface border border-border-custom rounded-3xl p-6 md:p-8 shadow-xl">
+          <h2 className="text-lg font-bold text-neutral-800 dark:text-neutral-100 tracking-tight mb-2">
+            Get started today
+          </h2>
+          <p className="text-xs text-neutral-400 mb-6">
+            Enter your details to create an account or sign in to your workspace.
+          </p>
           {authError && (
-            <div className="w-full max-w-md mb-3 text-xs bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-3 rounded-lg border border-red-100 dark:border-red-950/30">
+            <div className="bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 text-xs px-3 py-2 rounded-lg border border-red-100 dark:border-red-950/30 mb-4">
               Sign-in failed: <span className="font-mono">{decodeURIComponent(authError)}</span>
             </div>
           )}
@@ -81,7 +90,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           <span className="bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
             Dev Options
           </span>
-          <span>pill at the bottom right to log in as Olivia (Owner) or Catherine (Client) instantly.</span>
+          <span>pill at the bottom right to log in as Syed Irfan (Owner) or Test-4 (Client) instantly.</span>
         </p>
       </div>
     </div>

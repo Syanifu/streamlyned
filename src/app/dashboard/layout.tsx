@@ -62,9 +62,12 @@ export default async function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header (Color switching on the top right) */}
         <header className="h-14 bg-surface border-b border-border-custom px-4 md:px-8 flex items-center justify-between shrink-0 z-10">
-          <div>
-            <span className="md:hidden text-sm font-semibold tracking-tight text-neutral-800 dark:text-neutral-200">
+          <div className="flex items-center gap-1.5 md:hidden">
+            <span className="text-sm font-semibold tracking-tight text-neutral-800 dark:text-neutral-200">
               Streamlyned
+            </span>
+            <span className="text-[7px] text-neutral-450 dark:text-neutral-500 font-medium">
+              developed by Scaling Dynamics
             </span>
           </div>
           <div className="flex items-center gap-2">

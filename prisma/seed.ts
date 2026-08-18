@@ -13,8 +13,8 @@ async function main() {
   const owner = await prisma.user.create({
     data: {
       email: "owner@streamlyned.com",
-      name: "Olivia Owner",
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=olivia",
+      name: "Syed Irfan, owner",
+      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=syed",
       planTier: "premium+",
     },
   });
@@ -22,8 +22,8 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: "admin@streamlyned.com",
-      name: "Alex Admin",
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=alex",
+      name: "Test-2",
+      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=test2",
       planTier: "premium",
     },
   });
@@ -31,8 +31,8 @@ async function main() {
   const member = await prisma.user.create({
     data: {
       email: "member@streamlyned.com",
-      name: "Marcus Member",
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=marcus",
+      name: "Test-3",
+      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=test3",
       planTier: "standard",
     },
   });
@@ -40,8 +40,8 @@ async function main() {
   const client = await prisma.user.create({
     data: {
       email: "client@streamlyned.com",
-      name: "Catherine Client",
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=catherine",
+      name: "Test-4",
+      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=test4",
       planTier: "standard",
     },
   });
@@ -256,7 +256,7 @@ async function main() {
   await prisma.chatMessage.createMany({
     data: [
       { workspaceId: workspace.id, projectId: project1.id, userId: owner.id, content: "Welcome to the Project Chat! Use this room for quick synchronous checks." },
-      { workspaceId: workspace.id, projectId: project1.id, userId: member.id, content: "Sounds good, Olivia. I will post progress here daily." },
+      { workspaceId: workspace.id, projectId: project1.id, userId: member.id, content: "Sounds good, Syed Irfan. I will post progress here daily." },
     ],
   });
 
@@ -281,7 +281,7 @@ async function main() {
       workspaceId: workspace.id,
       dmGroupId: dmGroup.id,
       userId: owner.id,
-      content: "Hey Alex, are we set for the board meeting next week?",
+      content: "Hey Test-2, are we set for the board meeting next week?",
     },
   });
 
@@ -290,7 +290,7 @@ async function main() {
       workspaceId: workspace.id,
       dmGroupId: dmGroup.id,
       userId: admin.id,
-      content: "Yes Olivia, I'm compile-ranking the performance reports today.",
+      content: "Yes Syed Irfan, I'm compile-ranking the performance reports today.",
     },
   });
 
@@ -316,7 +316,7 @@ async function main() {
       userId: admin.id,
       type: "ASSIGNMENT",
       title: "New Task Assigned",
-      message: "Olivia assigned you the task: Review copy options for homepage banner",
+      message: "Syed Irfan assigned you the task: Review copy options for homepage banner",
       targetUrl: `/dashboard/projects/${project1.id}?tab=tasks`,
     },
   });
