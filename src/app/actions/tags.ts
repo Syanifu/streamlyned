@@ -762,3 +762,104 @@ export async function getTagInheritedLineage(tagId: string): Promise<string[]> {
 
   return ancestorIds;
 }
+
+/**
+ * Imports chart of accounts mapping tags into the active workspace.
+ */
+export async function importAccountingDataAction(provider: "tally" | "quickbooks") {
+  try {
+    const session = await requireSession();
+    const workspaceId = session.workspace.id;
+    const userId = session.user.id;
+
+    // Get or seed the default "Account / Organization" tag type
+    let tagType = await db.tagType.findFirst({
+      where: { workspaceId, name: "Account / Organization" },
+    });
+
+    if (!tagType) {
+      tagType = await db.tagType.create({
+        data: {
+          workspaceId,
+          name: "Account / Organization",
+          description: "System tag type for Accounts",
+          isSystem: true,
+        },
+      });
+    }
+
+    const createdTags = [];
+
+    if (provider === "quickbooks") {
+      const qboAccounts = [
+        { code: "QBO-1100", name: "Accounts Receivable (QBO)" },
+        { code: "QBO-1200", name: "Inventory Asset (QBO)" },
+        { code: "QBO-2100", name: "Accounts Payable (QBO)" },
+        { code: "QBO-4000", name: "Sales Revenue (QBO)" },
+        { code: "QBO-6100", name: "Rent Expense (QBO)" },
+      ];
+
+      for (const acc of qboAccounts) {
+        const tag = await db.tag.upsert({
+          where: {
+            workspaceId_tagTypeId_code: { workspaceId, tagTypeId: tagType.id, code: acc.code },
+          },
+          update: { name: acc.name, status: "ACTIVE" },
+          create: {
+            workspaceId,
+            tagTypeId: tagType.id,
+            code: acc.code,
+            name: acc.name,
+            status: "ACTIVE",
+          },
+        });
+        createdTags.push(tag);
+      }
+    } else if (provider === "tally") {
+      const tallyAccounts = [
+        { code: "TALLY-1001", name: "Cash in Hand (Tally)" },
+        { code: "TALLY-2001", name: "Sundry Debtors (Tally)" },
+        { code: "TALLY-3001", name: "Sundry Creditors (Tally)" },
+        { code: "TALLY-4001", name: "Purchases Ledger (Tally)" },
+        { code: "TALLY-5001", name: "Salaries Ledger (Tally)" },
+      ];
+
+      for (const acc of tallyAccounts) {
+        const tag = await db.tag.upsert({
+          where: {
+            workspaceId_tagTypeId_code: { workspaceId, tagTypeId: tagType.id, code: acc.code },
+          },
+          update: { name: acc.name, status: "ACTIVE" },
+          create: {
+            workspaceId,
+            tagTypeId: tagType.id,
+            code: acc.code,
+            name: acc.name,
+            status: "ACTIVE",
+          },
+        });
+        createdTags.push(tag);
+      }
+    }
+
+    // Write audit logs
+    await db.tagAuditLog.create({
+      data: {
+        workspaceId,
+        userId,
+        action: "UPDATE",
+        entityType: "TAG_TYPE",
+        entityId: tagType.id,
+        oldValue: JSON.stringify({ note: `Import from ${provider}` }),
+        newValue: JSON.stringify({ count: createdTags.length }),
+      },
+    });
+
+    revalidatePath("/dashboard/tags");
+    revalidatePath("/dashboard/settings/tags");
+
+    return { success: true, count: createdTags.length };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
