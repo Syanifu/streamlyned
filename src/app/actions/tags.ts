@@ -338,25 +338,41 @@ export async function getTagsSettingsData() {
       }),
     ]);
 
-    return {
+    const result = {
       success: true,
       types,
       tags,
       relations,
       allowedRelations,
-      auditLogs: auditLogs.map((log) => ({
-        id: log.id,
-        userName: log.user.name,
-        email: log.user.email,
-        action: log.action,
-        entityType: log.entityType,
-        entityId: log.entityId,
-        oldValue: log.oldValue ? JSON.parse(log.oldValue) : null,
-        newValue: log.newValue ? JSON.parse(log.newValue) : null,
-        timestamp: log.timestamp.toISOString(),
-      })),
+      auditLogs: auditLogs.map((log) => {
+        let parsedOld = null;
+        let parsedNew = null;
+        try {
+          parsedOld = log.oldValue ? JSON.parse(log.oldValue) : null;
+        } catch {
+          parsedOld = log.oldValue;
+        }
+        try {
+          parsedNew = log.newValue ? JSON.parse(log.newValue) : null;
+        } catch {
+          parsedNew = log.newValue;
+        }
+        return {
+          id: log.id,
+          userName: log.user.name,
+          email: log.user.email,
+          action: log.action,
+          entityType: log.entityType,
+          entityId: log.entityId,
+          oldValue: parsedOld,
+          newValue: parsedNew,
+          timestamp: log.timestamp.toISOString(),
+        };
+      }),
       role: session.role,
     };
+
+    return JSON.parse(JSON.stringify(result));
   } catch (err: any) {
     return { success: false, error: err.message };
   }
