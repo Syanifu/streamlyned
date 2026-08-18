@@ -90,6 +90,7 @@ model Workspace {
   maintenanceWorkOrders MaintenanceWorkOrder[]
   employees             Employee[]
   salarySlips           SalarySlip[]
+  tags                  Tag[]
 }
 
 model WorkspaceMember {
@@ -1214,4 +1215,18 @@ model SalarySlip {
   employee            Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, month])
+}
+
+// --- Centralized Tagging System ---
+model Tag {
+  id          String   @id @default(uuid())
+  workspaceId String
+  entityType  String   // PROJECT | ITEM | EMPLOYEE | SUPPLIER | CUSTOMER | COA | GL
+  entityId    String   // The ID of the respective record
+  code        String   // The code of the record (e.g. CEMENT-53G, PRJ-101)
+  label       String   // The tag string (e.g. "Critical", "Phase-1")
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, entityType, entityId, label])
 }

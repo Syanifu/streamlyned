@@ -20,6 +20,7 @@ import {
   Download,
   Database,
   Coins,
+  Tag,
 } from "lucide-react";
 
 
@@ -140,6 +141,13 @@ export default function NavigationSidebar({
       href: "/dashboard/payroll",
       label: "Payroll",
       icon: <User size={16} />,
+      exact: false,
+      visible: !isClient,
+    },
+    {
+      href: "/dashboard/tags",
+      label: "Tags Manager",
+      icon: <Tag size={16} />,
       exact: false,
       visible: !isClient,
     },
