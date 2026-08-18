@@ -650,32 +650,6 @@ export default function ProfileView({
             </div>
           </div>
 
-          {/* ── Connected Apps ──────────────────────────────────────────────── */}
-          <div className="pt-6 border-t border-border-custom space-y-3">
-            <div className="flex items-center gap-2">
-              <Plug size={14} className="text-neutral-400" />
-              <div>
-                <h3 className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                  Connected Apps
-                </h3>
-                <p className="text-[10px] text-neutral-400 mt-0.5">
-                  Toggle to connect or disconnect external tools. Connected apps can sync and import content into your workspace.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              {INTEGRATIONS.map((integration) => (
-                <IntegrationRow
-                  key={integration.key}
-                  integration={integration}
-                  status={integrations[integration.key as keyof typeof integrations] ?? { connected: false, accountName: null, lastSyncedAt: null }}
-                  onDisconnect={handleDisconnect}
-                  role={role}
-                />
-              ))}
-            </div>
-          </div>
 
           {/* ── Session Control ─────────────────────────────────────────────── */}
           <div className="pt-6 border-t border-border-custom space-y-4">
