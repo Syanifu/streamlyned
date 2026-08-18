@@ -39,7 +39,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         <img
           src="/landing-image.svg"
           alt="Background constructions abstract"
-          className="w-full h-full object-cover opacity-[0.08] dark:opacity-[0.04] animate-bg-breath transform origin-center"
+          className="w-full h-full object-cover opacity-[0.30] dark:opacity-[0.20] animate-bg-breath transform origin-center"
         />
       </div>
 
