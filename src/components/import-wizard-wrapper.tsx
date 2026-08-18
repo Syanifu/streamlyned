@@ -21,7 +21,7 @@ export default function ImportWizardWrapper() {
           }`}
         >
           <FolderUp size={14} />
-          Basecamp Projects
+          Data Import
         </button>
         <button
           onClick={() => setActiveTab("accounting")}

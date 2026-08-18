@@ -21,6 +21,7 @@ import {
   Database,
   Coins,
   Tag,
+  Link as LinkIcon,
 } from "lucide-react";
 
 
@@ -181,8 +182,8 @@ export default function NavigationSidebar({
     },
     {
       href: "/dashboard/import",
-      label: "Import",
-      icon: <Download size={16} />,
+      label: "Integrations",
+      icon: <LinkIcon size={16} />,
       exact: true,
       visible: !isClient && (role === "OWNER" || role === "ADMIN"),
     },
