@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { DM_Sans, Lora } from "next/font/google";
 import "./globals.css";
 import DevBanner from "@/components/dev-banner";
 import { getSession } from "@/lib/auth";
@@ -12,6 +12,13 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
   display: "swap",
   weight: ["300", "400", "500", "600", "700"],
+});
+
+const lora = Lora({
+  variable: "--font-lora",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +46,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${theme === "dark" ? "dark" : ""} ${dmSans.variable} h-full antialiased`}
+      className={`${theme === "dark" ? "dark" : ""} ${dmSans.variable} ${lora.variable} h-full antialiased`}
       {...(colorBg ? { "data-bg": colorBg } : {})}
     >
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground">

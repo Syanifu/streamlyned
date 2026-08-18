@@ -66,7 +66,7 @@ export default function LandingForm() {
   };
 
   return (
-    <div className="w-full max-w-md bg-surface border border-border-custom rounded-xl p-8 shadow-sm space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-xl font-medium text-neutral-900 dark:text-white tracking-tight">
           Join Streamlyned
@@ -78,11 +78,11 @@ export default function LandingForm() {
 
       <form onSubmit={handleEmailSignIn} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-xs font-semibold text-neutral-600 uppercase tracking-wider mb-1.5">
+          <label htmlFor="email" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
             Email Address
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-neutral-400">
+            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-neutral-400 animate-pulse">
               <Mail size={14} />
             </span>
             <input
@@ -93,20 +93,20 @@ export default function LandingForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isPending}
-              className="w-full text-sm pl-9 pr-4 py-2 border border-border-custom bg-transparent rounded-lg focus:outline-none focus:border-brand-accent placeholder-neutral-400 text-neutral-800 dark:text-neutral-100 disabled:opacity-50"
+              className="w-full text-sm pl-9 pr-4 py-2.5 border border-[#ebdccb] dark:border-neutral-800 bg-transparent rounded-xl focus:outline-none focus:ring-1 focus:ring-[#c06c5c] focus:border-[#c06c5c] placeholder-neutral-400 text-neutral-800 dark:text-neutral-100 disabled:opacity-50 transition-colors"
             />
           </div>
         </div>
 
         {error && (
-          <div className="text-xs bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-3 rounded-lg border border-red-100 dark:border-red-950/30 flex items-start gap-2">
+          <div className="text-xs bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-3 rounded-xl border border-red-100 dark:border-red-950/30 flex items-start gap-2">
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-start gap-2">
+          <div className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 flex items-start gap-2">
             <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
             <span>{successMsg}</span>
           </div>
@@ -115,7 +115,7 @@ export default function LandingForm() {
         <button
           type="submit"
           disabled={isPending || !email.trim()}
-          className="w-full flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 rounded-lg text-sm font-semibold py-2.5 transition-colors disabled:opacity-50 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 bg-[#c06c5c] hover:bg-[#b05b4b] text-white rounded-xl text-sm font-semibold py-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer shadow-sm"
         >
           {isPending ? (
             <>
@@ -130,16 +130,16 @@ export default function LandingForm() {
         </button>
 
         <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-border-custom opacity-55"></div>
+          <div className="flex-grow border-t border-[#ebdccb] dark:border-neutral-800 opacity-55"></div>
           <span className="flex-shrink mx-4 text-[9px] text-neutral-400 font-bold uppercase tracking-widest select-none">or</span>
-          <div className="flex-grow border-t border-border-custom opacity-55"></div>
+          <div className="flex-grow border-t border-[#ebdccb] dark:border-neutral-800 opacity-55"></div>
         </div>
 
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isPending}
-          className="w-full flex items-center justify-center gap-2 border border-border-custom bg-[#FFFFFF] hover:bg-[#F8F9FA] text-[#000000] dark:bg-[#FFFFFF] dark:hover:bg-[#F8F9FA] dark:text-[#000000] rounded-lg text-sm font-semibold py-2.5 transition-colors disabled:opacity-50 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 border border-[#ebdccb] dark:border-neutral-800 bg-[#FFFFFF] hover:bg-[#F8F9FA] text-[#000000] rounded-xl text-sm font-semibold py-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer"
         >
           <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
