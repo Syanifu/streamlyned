@@ -118,7 +118,10 @@ export async function syncDomainEntitiesToTags() {
     ] = await Promise.all([
       db.tagType.findMany({ where: { workspaceId } }),
       db.project.findMany({ where: { workspaceId, deletedAt: null } }),
-      db.wbsNode.findMany({ where: { project: { workspaceId } } }),
+      db.wbsNode.findMany({
+        where: { project: { workspaceId } },
+        include: { project: true },
+      }),
       db.supplierMaster.findMany({ where: { workspaceId } }),
       db.customerMaster.findMany({ where: { workspaceId } }),
       db.employee.findMany({ where: { workspaceId } }),
@@ -160,19 +163,21 @@ export async function syncDomainEntitiesToTags() {
       if (wbsTypeId) {
         // First pass: upsert all nodes
         for (const node of wbsNodes) {
+          const projectCode = node.project.name.replace(/\s+/g, "-").toUpperCase().slice(0, 8);
+          const wbsCode = `WBS-${projectCode}-${node.code}`;
           await tx.tag.upsert({
             where: {
               workspaceId_tagTypeId_code: {
                 workspaceId,
                 tagTypeId: wbsTypeId,
-                code: node.code,
+                code: wbsCode,
               },
             },
             update: { name: node.name },
             create: {
               workspaceId,
               tagTypeId: wbsTypeId,
-              code: node.code,
+              code: wbsCode,
               name: node.name,
               entityType: "WBS",
               entityId: node.id,
@@ -189,8 +194,9 @@ export async function syncDomainEntitiesToTags() {
 
         for (const node of wbsNodes) {
           if (node.parentCode) {
-            const childId = tagMap.get(node.code);
-            const parentId = tagMap.get(node.parentCode);
+            const projectCode = node.project.name.replace(/\s+/g, "-").toUpperCase().slice(0, 8);
+            const childId = tagMap.get(`WBS-${projectCode}-${node.code}`);
+            const parentId = tagMap.get(`WBS-${projectCode}-${node.parentCode}`);
             if (childId && parentId) {
               await tx.tag.update({
                 where: { id: childId },
@@ -205,19 +211,20 @@ export async function syncDomainEntitiesToTags() {
       const compTypeId = typeMap.get(SYSTEM_TAG_TYPES.COMPANY);
       if (compTypeId) {
         for (const s of suppliers) {
+          const supplierCode = `SPL-${s.code}`;
           await tx.tag.upsert({
             where: {
               workspaceId_tagTypeId_code: {
                 workspaceId,
                 tagTypeId: compTypeId,
-                code: s.code,
+                code: supplierCode,
               },
             },
             update: { name: s.name },
             create: {
               workspaceId,
               tagTypeId: compTypeId,
-              code: s.code,
+              code: supplierCode,
               name: s.name,
               entityType: "SUPPLIER",
               entityId: s.id,
@@ -226,19 +233,20 @@ export async function syncDomainEntitiesToTags() {
           });
         }
         for (const c of customers) {
+          const customerCode = `CST-${c.code}`;
           await tx.tag.upsert({
             where: {
               workspaceId_tagTypeId_code: {
                 workspaceId,
                 tagTypeId: compTypeId,
-                code: c.code,
+                code: customerCode,
               },
             },
             update: { name: c.name },
             create: {
               workspaceId,
               tagTypeId: compTypeId,
-              code: c.code,
+              code: customerCode,
               name: c.name,
               entityType: "CUSTOMER",
               entityId: c.id,
