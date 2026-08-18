@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import LandingForm from "@/components/landing-form";
-import { Sparkles } from "lucide-react";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const session = await getSession();
@@ -15,304 +14,153 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   const authError = params.error;
 
   return (
-    <div className="flex-1 flex flex-col justify-between bg-[#0a0f14] text-[#ffb000] font-mono px-4 md:px-8 py-6 md:py-16 relative overflow-hidden min-h-screen selection:bg-[#00fff5] selection:text-[#0a0f14]">
-      {/* CSS Stylesheet Inject for CRT Scanlines, Blueprint Grid and LED animations */}
+    <div className="min-h-screen h-screen flex flex-col justify-between bg-black text-white font-mono overflow-hidden relative select-none">
+      {/* CSS Stylesheet Inject for Scanlines, Data Rain, and Stark Terminals */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes bgGridMove {
+        @keyframes scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100vh); }
+        }
+        @keyframes data-rain {
           0% { background-position: 0 0; }
-          100% { background-position: 40px 40px; }
+          100% { background-position: 0 600px; }
         }
-        @keyframes rotate3D {
-          0% { transform: rotateX(65deg) rotateY(0deg) rotateZ(0deg); }
-          100% { transform: rotateX(65deg) rotateY(0deg) rotateZ(360deg); }
-        }
-        @keyframes crt-flicker {
-          0% { opacity: 0.98; }
-          50% { opacity: 0.99; }
-          100% { opacity: 0.98; }
-        }
-        @keyframes scanline-sweep {
-          0% { left: -10%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { left: 110%; opacity: 0; }
-        }
-        @keyframes led-activate-green {
-          0%, 25% { background-color: #ffb000; box-shadow: 0 0 4px #ffb000; }
-          30%, 100% { background-color: #00ff66; box-shadow: 0 0 12px #00ff66; }
-        }
-        @keyframes led-activate-yellow {
-          0%, 55% { background-color: #ffb000; box-shadow: 0 0 4px #ffb000; }
-          60%, 100% { background-color: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
-        }
-        @keyframes led-activate-red {
-          0%, 80% { background-color: #ffb000; box-shadow: 0 0 4px #ffb000; }
-          85%, 100% { background-color: #ff3333; box-shadow: 0 0 12px #ff3333; }
-        }
-        @keyframes text-blink {
+        @keyframes text-flicker {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
+          23% { opacity: 1; }
+          24% { opacity: 0.2; }
+          26% { opacity: 0.2; }
+          27% { opacity: 1; }
+          78% { opacity: 1; }
+          79% { opacity: 0.4; }
+          80% { opacity: 0.4; }
+          81% { opacity: 1; }
         }
-        @keyframes terminal-boot {
-          0% { transform: scaleY(0.005) scaleX(0); filter: brightness(3); opacity: 0; }
-          40% { transform: scaleY(0.005) scaleX(1); filter: brightness(2.5); opacity: 1; }
-          70% { transform: scaleY(1) scaleX(1); filter: brightness(1.2); }
-          100% { transform: scale(1); opacity: 1; }
+        @keyframes type-in {
+          from { width: 0; }
+          to { width: 100%; }
         }
-        .blueprint-grid {
-          background-size: 40px 40px;
-          background-image: 
-            linear-gradient(to right, rgba(0, 255, 245, 0.04) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0, 255, 245, 0.04) 1px, transparent 1px);
-          animation: bgGridMove 20s linear infinite;
+        .animate-scanline {
+          animation: scanline 8s linear infinite;
         }
-        .animate-rotate-3d {
-          transform-style: preserve-3d;
-          animation: rotate3D 60s linear infinite;
-          perspective: 1000px;
+        .data-rain-bg {
+          background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.95)), 
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='10' y='20' fill='%2300ff00' font-family='monospace' font-size='10' opacity='0.25'%3E10101%3C/text%3E%3Ctext x='50' y='40' fill='%2300ff00' font-family='monospace' font-size='8' opacity='0.15'%3E01100%3C/text%3E%3Ctext x='30' y='70' fill='%2300ff00' font-family='monospace' font-size='9' opacity='0.2'%3E11011%3C/text%3E%3Ctext x='70' y='90' fill='%2300ff00' font-family='monospace' font-size='11' opacity='0.3'%3E00101%3C/text%3E%3C/svg%3E");
+          background-size: 200px 200px;
+          animation: data-rain 8s linear infinite;
         }
-        .crt-flicker {
-          animation: crt-flicker 0.15s infinite;
-        }
-        .crt-overlay::after {
-          content: " ";
-          display: block;
-          position: absolute;
-          top: 0; left: 0; bottom: 0; right: 0;
-          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
-          z-index: 10;
-          background-size: 100% 4px;
-          pointer-events: none;
-        }
-        .scanner-bar {
-          background: linear-gradient(90deg, transparent, #00fff5 50%, transparent);
-          box-shadow: 0 0 15px #00fff5, 0 0 30px #00fff5;
-          animation: scanline-sweep 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-        .led-green-anim {
-          animation: led-activate-green 4.5s ease-in-out infinite;
-        }
-        .led-yellow-anim {
-          animation: led-activate-yellow 4.5s ease-in-out infinite;
-        }
-        .led-red-anim {
-          animation: led-activate-red 4.5s ease-in-out infinite;
-        }
-        .animate-terminal-boot {
-          animation: terminal-boot 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          transform-origin: center;
+        .glow-red {
+          text-shadow: 0 0 8px #FF2D2D, 0 0 15px rgba(255, 45, 45, 0.4);
         }
         .glow-amber {
-          text-shadow: 0 0 8px rgba(255, 176, 0, 0.65), 0 0 20px rgba(255, 176, 0, 0.3);
+          text-shadow: 0 0 8px #FFD700, 0 0 15px rgba(255, 215, 0, 0.4);
         }
-        .glow-cyan {
-          text-shadow: 0 0 8px rgba(0, 255, 245, 0.65), 0 0 20px rgba(0, 255, 245, 0.3);
+        .animate-flicker {
+          animation: text-flicker 4s linear infinite;
         }
       `}} />
 
-      {/* Blueprint Grid moving background */}
-      <div className="absolute inset-0 z-0 blueprint-grid pointer-events-none" />
+      {/* 1. Background data rain & live processing static noise */}
+      <div className="absolute inset-0 z-0 data-rain-bg opacity-[0.06] pointer-events-none" />
 
-      {/* Top-left stenciled system layout */}
-      <div className="max-w-6xl mx-auto w-full flex items-center justify-between mb-8 md:mb-10 relative z-10 border-b border-[#ffb000]/25 pb-3">
-        <div className="flex items-center gap-3">
-          <span className="font-serif font-black text-lg tracking-widest text-[#ffb000] uppercase glow-amber">
-            [STREAMLYNED]
-          </span>
-          <span className="text-[9px] text-[#00fff5] border border-[#00fff5]/30 px-1.5 py-0.5 rounded font-mono glow-cyan">
-            ONLINE // SECURE
-          </span>
+      {/* 2. Vertically traveling horizontal radar refresh scanline */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-[#FF2D2D]/35 shadow-[0_0_8px_#FF2D2D] z-10 pointer-events-none animate-scanline" />
+
+      {/* 3. Global System Status Header */}
+      <div className="w-full relative z-20 bg-black">
+        <div className="flex flex-row justify-between items-center px-4 py-2 text-[10px] tracking-widest select-none">
+          <div>
+            <span className="text-[#FFD700] font-bold">[ STREAMLYNED ]</span>
+            <span className="text-neutral-500 ml-2">// PROJECT_CONTROL_SPINE_v2.1</span>
+          </div>
+          <div className="text-neutral-400 flex gap-4">
+            <span>PING: 14ms</span>
+            <span className="hidden sm:inline">ENC: AES-256</span>
+            <span>UPTIME: 99.99%</span>
+          </div>
         </div>
-        <span className="text-[10px] text-[#ffb000]/60 font-mono">
-          DEV_BY: SCALING_DYNAMICS // CWD: /Users/apple/Streamlyned
-        </span>
+        {/* Stark Red Dividing Line */}
+        <div className="w-full h-[1px] bg-[#FF2D2D]" />
       </div>
 
-      <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col justify-center relative z-10">
+      {/* 4. Main Interface (Full-Screen Split) */}
+      <div className="flex-1 w-full flex flex-col md:flex-row relative z-20 items-stretch">
         
-        {/* 1. Hero Section (Split Screen) */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-center py-6 md:py-12">
-          
-          {/* Left Side: The Briefing & Rotating Wireframe */}
-          <div className="md:col-span-7 space-y-6 relative min-h-[380px] flex flex-col justify-center">
-            {/* Slowly rotating 3D Tron wireframe bridge/platform */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center opacity-[0.14] dark:opacity-[0.11]">
-              <svg className="w-[110%] h-[110%] text-[#00fff5] animate-rotate-3d" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.25">
-                <path d="M 0 50 L 100 50 M 50 0 L 50 100 M 0 0 L 100 100 M 100 0 L 0 100" />
-                <circle cx="50" cy="50" r="45" strokeDasharray="3 3" />
-                <circle cx="50" cy="50" r="35" />
-                <circle cx="50" cy="50" r="22" strokeDasharray="6 6" />
-                <polygon points="50,12 85,75 15,75" />
-                <polygon points="50,88 85,25 15,25" />
-                <line x1="10" y1="10" x2="90" y2="10" />
-                <line x1="10" y1="90" x2="90" y2="90" />
-              </svg>
-            </div>
-
-            <div className="relative z-10 space-y-5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-[#00fff5]/35 bg-[#00fff5]/5 text-xs text-[#00fff5] font-bold tracking-widest uppercase glow-cyan">
-                <Sparkles size={11} className="animate-spin" />
-                <span>INTEGRATION_CORE_ACTIVE</span>
-              </div>
-
-              {/* Large glowing amber header */}
-              <h1 className="text-3xl md:text-5xl font-serif font-black tracking-tight text-[#ffb000] leading-[1.15] glow-amber uppercase">
-                Blueprint to General Ledger.<br />Eliminate the execution drift.
-              </h1>
-
-              {/* Clean sans-serif sub-header */}
-              <p className="text-sm text-[#ffb000]/80 leading-relaxed font-sans max-w-lg">
-                Streamlyned is an AI-native project control spine built specifically for heavy engineering, contractors, and builders. Connect daily site progress (DPR), material procurements, and subcontract commitments directly to your project ledger—eliminating the lag between physical execution and financial truth.
-              </p>
-            </div>
+        {/* Left Panel: The Manifest (60% width) */}
+        <div className="flex-1 md:w-3/5 border-b md:border-b-0 md:border-r border-neutral-800 p-6 md:p-12 flex flex-col justify-center space-y-8 bg-black">
+          <div className="space-y-4 max-w-xl">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white leading-none">
+              BLUEPRINT TO GENERAL LEDGER.
+            </h1>
+            <h2 className="text-lg md:text-xl font-bold tracking-widest text-[#FF2D2D] glow-red animate-flicker">
+              &gt; ELIMINATE EXECUTION DRIFT.
+            </h2>
           </div>
 
-          {/* Right Side: The Login Console */}
-          <div className="md:col-span-5 w-full bg-[#11161d] border-2 border-[#ffb000]/40 rounded-xl p-6 md:p-8 shadow-2xl relative overflow-hidden crt-screen crt-overlay crt-flicker animate-terminal-boot">
-            {/* CRT Screen Reflection Highlight */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none z-10" />
+          <p className="text-xs text-neutral-300 leading-[1.8] max-w-lg font-sans">
+            Streamlyned is an AI-native project control spine built specifically for heavy engineering, contractors, and builders. Connect daily site progress (DPR), material procurements, and subcontract commitments directly to your project ledger—eliminating the lag between physical execution and financial truth.
+          </p>
+
+          {/* Directory styled comment-code blocks */}
+          <div className="space-y-4 max-w-xl border-t border-neutral-800 pt-6 text-[11px]">
+            <div className="grid grid-cols-1 gap-1">
+              <span className="text-[#FFD700] font-bold">01_RECONCILIATION.dat</span>
+              <span className="text-neutral-400 pl-4 border-l border-neutral-800 leading-relaxed font-sans">
+                Reconciled Money Trails. Automatically match commitments to actual costs. DPR and vendor invoices post directly to WBS nodes, ensuring project costs reconcile perfectly with your ledger.
+              </span>
+            </div>
             
-            {/* Terminal Header Info */}
-            <div className="flex items-center justify-between text-[9px] text-[#ffb000]/50 border-b border-[#ffb000]/25 pb-3 mb-6 font-mono">
-              <span>TERMINAL_ID: SL-X99</span>
-              <span>LOC_TIME: {new Date().toISOString().substring(11,19)}</span>
+            <div className="grid grid-cols-1 gap-1">
+              <span className="text-[#FFD700] font-bold">02_ISOLATION.dat</span>
+              <span className="text-neutral-400 pl-4 border-l border-neutral-800 leading-relaxed font-sans">
+                Rigid Contract &amp; WIP. Maintain strict multi-tenancy and permission boundaries between site engineers, subcontractors, and clients. Share progress certification sheets without exposing internal costing records.
+              </span>
             </div>
 
-            {authError && (
-              <div className="bg-red-950/30 text-red-400 text-xs px-3 py-2.5 rounded border border-red-900/40 mb-5 font-mono">
-                SEC_ALERT: Auth failed: {decodeURIComponent(authError)}
-              </div>
-            )}
+            <div className="grid grid-cols-1 gap-1">
+              <span className="text-[#FFD700] font-bold">03_INTEGRITY.dat</span>
+              <span className="text-neutral-400 pl-4 border-l border-neutral-800 leading-relaxed font-sans">
+                Period-Locked Integrity. Lock closed accounting periods automatically. Late site syncs from mobile devices are held for future periods, preventing retrospective changes that corrupt tax returns and audits.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel: The Authentication Terminal (40% width) */}
+        <div className="md:w-2/5 p-6 md:p-12 flex flex-col justify-center items-center bg-black">
+          <div className="w-full max-w-md border border-white p-6 md:p-8 bg-black rounded-none shadow-none relative">
             
+            {/* Status indicators */}
+            <div className="absolute -top-3 right-4 bg-black px-2 text-[9px] text-neutral-500 uppercase tracking-widest select-none">
+              SECURE_LINK // NODE_4B
+            </div>
+
             <LandingForm />
           </div>
-
-        </div>
-
-        {/* 2. Features Section (The System Readouts) */}
-        <div className="mt-16 md:mt-24 border-t border-[#ffb000]/25 pt-12 relative overflow-hidden">
-          <div className="scanner-bar absolute top-0 bottom-0 pointer-events-none z-10 w-[6px]" />
-          
-          <h3 className="text-xs uppercase tracking-widest text-[#ffb000]/60 mb-8 font-mono">
-            // CRITICAL_SYSTEM_READOUTS //
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-            
-            {/* Panel 01: Reconciled Money Trails */}
-            <div className="border border-[#ffb000]/25 bg-[#0d131a] rounded-lg p-5 font-mono relative overflow-hidden flex flex-col justify-between min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between mb-4 border-b border-[#ffb000]/15 pb-2">
-                  <span className="text-[10px] text-[#ffb000]/55 uppercase tracking-wider">PANEL_01 // SEC_A</span>
-                  {/* Blinking LED */}
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ffb000] border border-black led-green-anim" />
-                </div>
-                <h4 className="text-sm font-bold uppercase text-[#ffb000] mb-2 glow-amber">Reconciled Money Trails</h4>
-                <p className="text-[11px] text-[#ffb000]/80 leading-relaxed font-sans">
-                  Automatically match commitments to actual costs. Daily progress (DPR) and vendor invoices post directly to WBS nodes, ensuring project costs reconcile perfectly with your ledger.
-                </p>
-              </div>
-              {/* Faux Waveform Graphic */}
-              <div className="h-6 w-full opacity-35 mt-4 flex items-end gap-[2px]">
-                <span className="w-1 bg-[#ffb000]" style={{ height: "40%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "60%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "80%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "30%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "50%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "70%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "90%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "45%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "65%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "20%" }} />
-              </div>
-            </div>
-
-            {/* Panel 02: Rigid Contract & WIP Isolation */}
-            <div className="border border-[#ffb000]/25 bg-[#0d131a] rounded-lg p-5 font-mono relative overflow-hidden flex flex-col justify-between min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between mb-4 border-b border-[#ffb000]/15 pb-2">
-                  <span className="text-[10px] text-[#ffb000]/55 uppercase tracking-wider">PANEL_02 // SEC_B</span>
-                  {/* Blinking LED */}
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ffb000] border border-black led-yellow-anim" />
-                </div>
-                <h4 className="text-sm font-bold uppercase text-[#ffb000] mb-2 glow-amber">Rigid Contract &amp; WIP Isolation</h4>
-                <p className="text-[11px] text-[#ffb000]/80 leading-relaxed font-sans">
-                  Maintain strict multi-tenancy and permission boundaries between site engineers, subcontractors, and clients. Share progress certification sheets without exposing internal costing records.
-                </p>
-              </div>
-              {/* Faux Waveform Graphic */}
-              <div className="h-6 w-full opacity-35 mt-4 flex items-end gap-[2px]">
-                <span className="w-1 bg-[#ffb000]" style={{ height: "25%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "45%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "35%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "85%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "15%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "75%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "55%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "95%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "35%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "65%" }} />
-              </div>
-            </div>
-
-            {/* Panel 03: Period-Locked Integrity */}
-            <div className="border border-[#ffb000]/25 bg-[#0d131a] rounded-lg p-5 font-mono relative overflow-hidden flex flex-col justify-between min-h-[220px]">
-              <div>
-                <div className="flex items-center justify-between mb-4 border-b border-[#ffb000]/15 pb-2">
-                  <span className="text-[10px] text-[#ffb000]/55 uppercase tracking-wider">PANEL_03 // SEC_C</span>
-                  {/* Blinking LED */}
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ffb000] border border-black led-red-anim" />
-                </div>
-                <h4 className="text-sm font-bold uppercase text-[#ffb000] mb-2 glow-amber">Period-Locked Integrity</h4>
-                <p className="text-[11px] text-[#ffb000]/80 leading-relaxed font-sans">
-                  Lock closed accounting periods automatically. Late site syncs from mobile devices are held for future periods, preventing retrospective changes that corrupt tax returns and audits.
-                </p>
-              </div>
-              {/* Faux Waveform Graphic */}
-              <div className="h-6 w-full opacity-35 mt-4 flex items-end gap-[2px]">
-                <span className="w-1 bg-[#ffb000]" style={{ height: "80%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "70%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "60%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "50%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "40%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "30%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "20%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "10%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "5%" }} />
-                <span className="w-1 bg-[#ffb000]" style={{ height: "0%" }} />
-              </div>
-            </div>
-
-          </div>
         </div>
 
       </div>
 
-      {/* 3. The Footer */}
-      <div className="max-w-6xl mx-auto w-full text-center mt-12 md:mt-16 relative z-10 pt-6">
+      {/* 5. Stark Scale Ruler Footer */}
+      <div className="w-full relative z-20 bg-black">
         {/* Glowing blueprint scale ruler line */}
-        <div className="w-full h-2.5 bg-gradient-to-r from-transparent via-[#ffb000]/30 to-transparent relative mb-6">
-          <div className="absolute inset-0 flex justify-between text-[6px] text-[#ffb000]/40 font-mono px-4 select-none">
-            <span>0.0m</span><span>2.5m</span><span>5.0m</span><span>7.5m</span><span>10.0m</span><span>12.5m</span><span>15.0m</span>
+        <div className="w-full h-[1px] bg-neutral-800 relative">
+          <div className="absolute inset-x-0 -top-[3px] flex justify-between px-6 text-[6px] text-neutral-600 font-mono select-none">
+            <span>| 0%</span><span>| 10%</span><span>| 20%</span><span>| 30%</span><span>| 40%</span><span>| 50%</span><span>| 60%</span><span>| 70%</span><span>| 80%</span><span>| 90%</span><span>| 100%</span>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#ffb000]/50 border-t border-[#ffb000]/15 pt-4">
-          <div className="flex items-center gap-2">
-            <span className="font-serif font-black tracking-widest text-[#ffb000] uppercase text-sm glow-amber">
+        <div className="flex flex-row justify-between items-center px-4 py-3 text-[10px] text-neutral-500 border-t border-neutral-900">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-white tracking-widest text-xs select-none">
               STREAMLYNED
             </span>
-            <span className="w-1 h-3.5 bg-[#ffb000] inline-block animate-pulse align-middle" style={{ animationDuration: "1s" }} />
-            <span className="text-[10px] text-[#00fff5] ml-2 glow-cyan">// SECURE CONNECTION ESTABLISHED // BUILD v.8.2.4.</span>
+            <span className="w-1.5 h-3 bg-[#FFD700] inline-block animate-pulse align-middle" />
+            <span className="text-[9px] text-[#00FF00] ml-2 select-none font-mono hidden sm:inline">// SYSTEM SECURED BY STREAMLYNED PROTOCOL // CC: 256bit</span>
           </div>
-
-          <p className="text-[10px] flex items-center gap-1.5 flex-wrap">
-            <span>Quick Evaluation: Click the</span>
-            <span className="bg-[#ffb000] text-[#0a0f14] px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border-t border-white/30">
-              Dev Options
-            </span>
-            <span>pill at the bottom right to log in instantly.</span>
-          </p>
+          <div className="text-[9px] text-neutral-500">
+            © 2026 // BUILD v.8.2.4
+          </div>
         </div>
       </div>
     </div>
