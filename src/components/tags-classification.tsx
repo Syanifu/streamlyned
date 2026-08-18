@@ -293,7 +293,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
               <select
                 value={selectedTypeFilter}
                 onChange={(e) => setSelectedTypeFilter(e.target.value)}
-                className="text-xs px-3 py-2 border border-border-custom bg-surface rounded-xl focus:outline-none"
+                className="text-xs px-3 py-2 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-xl focus:outline-none"
               >
                 <option value="">All Classification Types</option>
                 {initialData.types.map((t) => (
@@ -423,7 +423,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                       setTagTypeSel(e.target.value);
                       setTagParentSel("");
                     }}
-                    className="w-full text-xs px-3 py-2 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg focus:outline-none"
+                    className="w-full text-xs px-3 py-2 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg focus:outline-none"
                   >
                     <option value="">Select Type</option>
                     {initialData.types.map((t) => (
@@ -469,7 +469,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                   <select
                     value={tagParentSel}
                     onChange={(e) => setTagParentSel(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg focus:outline-none"
+                    className="w-full text-xs px-3 py-2 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg focus:outline-none"
                   >
                     <option value="">No Parent (Root Node)</option>
                     {initialData.tags
@@ -627,7 +627,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                     required
                     value={sourceTypeSel}
                     onChange={(e) => setSourceTypeSel(e.target.value)}
-                    className="w-full text-xs px-2 py-1.5 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg"
+                    className="w-full text-xs px-2 py-1.5 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg"
                   >
                     <option value="">Select</option>
                     {initialData.types.map((t) => (
@@ -641,7 +641,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                     required
                     value={targetTypeSel}
                     onChange={(e) => setTargetTypeSel(e.target.value)}
-                    className="w-full text-xs px-2 py-1.5 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg"
+                    className="w-full text-xs px-2 py-1.5 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg"
                   >
                     <option value="">Select</option>
                     {initialData.types.map((t) => (
@@ -702,7 +702,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                       required
                       value={sourceTagSel}
                       onChange={(e) => setSourceTagSel(e.target.value)}
-                      className="w-full text-xs px-2 py-1.5 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg"
+                      className="w-full text-xs px-2 py-1.5 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg"
                     >
                       <option value="">Select</option>
                       {initialData.tags.map((t) => (
@@ -717,7 +717,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                       required
                       value={targetTagSel}
                       onChange={(e) => setTargetTagSel(e.target.value)}
-                      className="w-full text-xs px-2 py-1.5 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg"
+                      className="w-full text-xs px-2 py-1.5 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg"
                     >
                       <option value="">Select</option>
                       {initialData.tags.map((t) => (
@@ -735,7 +735,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                     required
                     value={relTypeSel}
                     onChange={(e) => setRelTypeSel(e.target.value)}
-                    className="w-full text-xs px-2 py-1.5 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg"
+                    className="w-full text-xs px-2 py-1.5 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg"
                   >
                     <option value="">Select Type</option>
                     <option value="HAS_WBS">has WBS</option>
@@ -852,7 +852,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                 <select
                   value={editTagParent}
                   onChange={(e) => setEditTagParent(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-border-custom bg-transparent dark:bg-neutral-900 rounded-lg focus:outline-none"
+                  className="w-full text-xs px-3 py-2 border border-border-custom bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 rounded-lg focus:outline-none"
                 >
                   <option value="">No Parent (Root Node)</option>
                   {initialData.tags
