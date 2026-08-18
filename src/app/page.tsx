@@ -63,40 +63,40 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         {/* Left Side: Product Mission & Design Philosophy */}
         <div className="md:col-span-7 space-y-6 max-w-xl animate-fade-up" style={{ animationDelay: "100ms" }}>
           
-          {/* Calm-Work Philosophy Badge */}
+          {/* Industrial-Grade Project Controls Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#dfc4c0] bg-[#f3dbda]/65 dark:bg-[#b85b4b]/15 text-[#855348] dark:text-[#e5c3c0] text-xs font-semibold uppercase tracking-wider">
             <Sparkles size={12} className="text-[#c06c5c]" />
-            <span>Calm-Work Philosophy</span>
+            <span>Industrial-Grade Project Controls</span>
           </div>
 
           <h1 className="text-3xl md:text-5xl font-serif font-medium tracking-tight text-[#2e312f] dark:text-[#f7f4f0] leading-[1.15]">
-            Consolidate work.<br />Eliminate noise.
+            Blueprint to General Ledger.<br />Eliminate the execution drift.
           </h1>
 
           <p className="text-base text-[#4c504d] dark:text-[#c4bdb4] leading-[1.7] font-sans">
-            Streamlyned is an AI-native project management platform designed specifically for small teams &amp; solo founders. By replacing scattered channels with unified workspaces &amp; reduce daily cognitive load.
+            Streamlyned is an AI-native project control spine built specifically for heavy engineering, contractors, and builders. Connect daily site progress (DPR), material procurements, and subcontract commitments directly to your project ledger—eliminating the lag between physical execution and financial truth.
           </p>
 
           <div className="space-y-4 pt-6 border-t border-[#ebdccb]/60 dark:border-neutral-800 max-w-lg">
             <div className="flex gap-3.5">
               <span className="text-[#c06c5c] dark:text-[#e5c3c0] font-bold text-sm select-none">✓</span>
               <div>
-                <h4 className="text-sm font-bold text-[#2e312f] dark:text-[#f7f4f0]">Retrieval over generation</h4>
-                <p className="text-xs text-[#5c615d] dark:text-[#aba49b] leading-relaxed mt-0.5">AI retrieves, ranks, and cites your team's context. No agent loops, no hallucinated content.</p>
+                <h4 className="text-sm font-bold text-[#2e312f] dark:text-[#f7f4f0]">Reconciled Money Trails</h4>
+                <p className="text-xs text-[#5c615d] dark:text-[#aba49b] leading-relaxed mt-0.5">Automatically match commitments to actual costs. Daily progress (DPR) and vendor invoices post directly to WBS nodes, ensuring project costs reconcile perfectly with your ledger.</p>
               </div>
             </div>
             <div className="flex gap-3.5">
               <span className="text-[#c06c5c] dark:text-[#e5c3c0] font-bold text-sm select-none">✓</span>
               <div>
-                <h4 className="text-sm font-bold text-[#2e312f] dark:text-[#f7f4f0]">Workspace multi-tenancy &amp; isolation</h4>
-                <p className="text-xs text-[#5c615d] dark:text-[#aba49b] leading-relaxed mt-0.5">Strict permission boundaries at the database level. Clients only see what you enable.</p>
+                <h4 className="text-sm font-bold text-[#2e312f] dark:text-[#f7f4f0]">Rigid Contract &amp; WIP Isolation</h4>
+                <p className="text-xs text-[#5c615d] dark:text-[#aba49b] leading-relaxed mt-0.5">Maintain strict multi-tenancy and permission boundaries between site engineers, subcontractors, and clients. Share progress certification sheets without exposing internal costing records.</p>
               </div>
             </div>
             <div className="flex gap-3.5">
               <span className="text-[#c06c5c] dark:text-[#e5c3c0] font-bold text-sm select-none">✓</span>
               <div>
-                <h4 className="text-sm font-bold text-[#2e312f] dark:text-[#f7f4f0]">Human in command</h4>
-                <p className="text-xs text-[#5c615d] dark:text-[#aba49b] leading-relaxed mt-0.5">Your data, completely private. You choose what to index and control how it responds.</p>
+                <h4 className="text-sm font-bold text-[#2e312f] dark:text-[#f7f4f0]">Period-Locked Integrity</h4>
+                <p className="text-xs text-[#5c615d] dark:text-[#aba49b] leading-relaxed mt-0.5">Lock closed accounting periods automatically. Late site syncs from mobile devices are held for future periods, preventing retrospective changes that corrupt tax returns and audits.</p>
               </div>
             </div>
           </div>
