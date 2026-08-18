@@ -339,7 +339,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                             <div className="text-[10px] text-neutral-400 mt-0.5">{t.name}</div>
                           </td>
                           <td className="p-3 font-semibold text-neutral-600 dark:text-neutral-300">
-                            {t.tagType.name}
+                            {t.tagType?.name || "Unknown"}
                           </td>
                           <td className="p-3 font-mono text-[10px] text-neutral-400">
                             {t.parentTag ? `${t.parentTag.code} (${t.parentTag.name})` : "—"}
@@ -664,9 +664,9 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
               {initialData.allowedRelations.map((ar) => (
                 <div key={ar.id} className="flex justify-between items-center p-2 rounded-lg border border-border-custom bg-surface hover:bg-neutral-50/50">
                   <span className="text-xs font-semibold text-neutral-850 dark:text-neutral-100 flex items-center gap-2">
-                    {ar.sourceType.name}
+                    {ar.sourceType?.name || "Unknown"}
                     <LinkIcon size={12} className="text-neutral-400" />
-                    {ar.targetType.name}
+                    {ar.targetType?.name || "Unknown"}
                   </span>
                   {isWriter && (
                     <button
@@ -706,7 +706,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                     >
                       <option value="">Select</option>
                       {initialData.tags.map((t) => (
-                        <option key={t.id} value={t.id}>{t.code} ({t.tagType.name})</option>
+                        <option key={t.id} value={t.id}>{t.code} ({t.tagType?.name || "Unknown"})</option>
                       ))}
                     </select>
                   </div>
@@ -721,7 +721,7 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
                     >
                       <option value="">Select</option>
                       {initialData.tags.map((t) => (
-                        <option key={t.id} value={t.id}>{t.code} ({t.tagType.name})</option>
+                        <option key={t.id} value={t.id}>{t.code} ({t.tagType?.name || "Unknown"})</option>
                       ))}
                     </select>
                   </div>
@@ -760,11 +760,11 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
               {initialData.relations.map((rel) => (
                 <div key={rel.id} className="flex justify-between items-center p-2 rounded-lg border border-border-custom bg-surface hover:bg-neutral-50/50">
                   <span className="text-xs font-semibold text-neutral-850 dark:text-neutral-100 flex items-center gap-2">
-                    {rel.sourceTag.code}
+                    {rel.sourceTag?.code || "Unknown"}
                     <span className="text-[9px] font-bold uppercase text-neutral-400">
-                      {rel.relationshipType.replace(/_/g, " ")}
+                      {rel.relationshipType?.replace(/_/g, " ") || ""}
                     </span>
-                    {rel.targetTag.code}
+                    {rel.targetTag?.code || "Unknown"}
                   </span>
                   {isWriter && (
                     <button
@@ -794,14 +794,14 @@ export default function TagsClassification({ initialData, onRefresh }: TagsClass
               <div key={log.id} className="p-3 border border-border-custom bg-surface/50 dark:bg-neutral-900/30 rounded-xl space-y-2 hover:shadow-sm transition-shadow">
                 <div className="flex justify-between items-center">
                   <span className="font-extrabold text-[10px] text-brand-accent uppercase tracking-wider">
-                    {log.action.replace(/_/g, " ")}
+                    {log.action?.replace(/_/g, " ") || "ACTION"}
                   </span>
                   <span className="text-[9px] text-neutral-400 font-mono">
-                    {new Date(log.timestamp).toLocaleString()}
+                    {log.timestamp ? new Date(log.timestamp).toLocaleString() : ""}
                   </span>
                 </div>
                 <div className="text-[10px] leading-normal font-medium text-neutral-700 dark:text-neutral-350">
-                  Actor: <span className="font-bold">{log.userName}</span> ({log.email}) • Target Entity: {log.entityType} ({log.entityId.slice(-6)})
+                  Actor: <span className="font-bold">{log.userName || "System"}</span> ({log.email || "system"}) • Target Entity: {log.entityType || "Tag"} ({log.entityId ? log.entityId.slice(-6) : ""})
                 </div>
                 {(log.oldValue || log.newValue) && (
                   <div className="grid grid-cols-2 gap-3 p-2 bg-neutral-100/50 dark:bg-neutral-900/50 rounded-lg text-[9px] font-mono leading-relaxed overflow-x-auto text-neutral-500">
