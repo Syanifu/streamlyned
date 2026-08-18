@@ -6,14 +6,8 @@ import { saveThemeAction, saveColorThemeAction } from "@/app/actions/theme";
 
 // Each step: color = "" means default light, "dark" is the dark mode step
 const SEQUENCE = [
-  { color: "",         dark: false },
-  { color: "#BFD3E8", dark: false },
-  { color: "#CBE2D4", dark: false },
-  { color: "#F0D0D5", dark: false },
-  { color: "#E7E7E9", dark: false },
-  { color: "#F6DEB2", dark: false },
-  { color: "#DAD0E8", dark: false },
-  { color: "",         dark: true  },
+  { color: "", dark: false },
+  { color: "", dark: true  },
 ];
 
 function applyColor(color: string) {
@@ -41,13 +35,10 @@ interface ThemeToggleProps {
 
 export default function ThemeToggle({ initialTheme, initialColor }: ThemeToggleProps) {
   const initDark = initialTheme === "dark";
-  const initColor = initialColor || "";
 
   // Find starting index in sequence
   const findIndex = () => {
-    const idx = SEQUENCE.findIndex(
-      (s) => s.dark === initDark && s.color === initColor
-    );
+    const idx = SEQUENCE.findIndex((s) => s.dark === initDark);
     return idx === -1 ? 0 : idx;
   };
 
@@ -75,22 +66,17 @@ export default function ThemeToggle({ initialTheme, initialColor }: ThemeToggleP
 
   const buttonStyle: React.CSSProperties = step.dark
     ? { background: "#000000" }
-    : step.color
-      ? { background: step.color }
-      : {
-          background:
-            "conic-gradient(from 0deg, #F0D0D5, #F6DEB2, #CBE2D4, #BFD3E8, #DAD0E8, #F0D0D5)",
-        };
+    : { background: "#ffffff" };
 
   return (
     <button
       onClick={handleCycle}
       title="Cycle theme"
-      className="w-[30px] h-[30px] rounded-lg border border-border-custom transition-all hover:scale-110 active:scale-95 overflow-hidden flex items-center justify-center"
+      className="w-[30px] h-[30px] rounded-lg border border-border-custom transition-all hover:scale-110 active:scale-95 overflow-hidden flex items-center justify-center cursor-pointer"
       style={buttonStyle}
     >
       {step.dark && <Sun size={14} className="text-white" />}
-      {!step.dark && !step.color && <Moon size={14} className="text-neutral-500" />}
+      {!step.dark && <Moon size={14} className="text-neutral-500" />}
     </button>
   );
 }
